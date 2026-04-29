@@ -1,0 +1,127 @@
+<%= render "admin/shared/page_header",
+  title: @customer.name.presence || "Unknown caller",
+  subtitle: format_phone(@customer.phone_number),
+  back: { label: "Back to contacts", path: admin_customers_path } do %>
+  <%= link_to "Edit", edit_admin_customer_path(@customer), class: "rounded-sm border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100" %>
+  <%= link_to "Delete", admin_customer_path(@customer), data: { turbo_method: :delete, turbo_confirm: "Remove this contact and all associated conversations?" }, class: "rounded-sm border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:border-red-300 hover:bg-red-100" %>
+<% end %>
+
+<div class="grid gap-6 lg:grid-cols-1">
+  <section class="rounded-sm border border-slate-100 bg-white p-5 shadow-sm">
+    <h2 class="text-sm font-semibold">Patient details</h2>
+    <dl class="mt-3 space-y-2 text-sm text-slate-600">
+      <div class="flex items-center justify-between">
+        <dt>Created</dt>
+        <dd class="font-medium text-slate-700"><%= l(@customer.created_at.to_date, format: :long) %></dd>
+      </div>
+      <div class="flex items-center justify-between">
+        <dt>Greeting name</dt>
+        <dd class="font-medium text-slate-700"><%= @customer.greeting_name.presence || "—" %></dd>
+      </div>
+      <div class="flex items-center justify-between">
+        <dt>Company</dt>
+        <dd class="font-medium text-slate-700"><%= @customer.metadata["company"] || "—" %></dd>
+      </div>
+      <div class="flex items-center justify-between">
+        <dt>Plan</dt>
+        <dd class="font-medium text-slate-700"><%= @customer.metadata["plan"] || "—" %></dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="rounded-sm border border-slate-100 bg-white p-5 shadow-sm">
+    <h2 class="text-sm font-semibold">Patient portrait</h2>
+    <div id="customer-portrait-content" class="mt-3 rounded-sm border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
+      Loading portrait...
+    </div>
+    <script id="customer-portrait" type="application/json"><%= raw json_escape((@customer.customer_portrait || "").to_json) %></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+    <script>
+      (() => {
+        const renderCustomerPortrait = () => {
+          const content = document.getElementById("customer-portrait-content");
+          const dataNode = document.getElementById("customer-portrait");
+          if (!content || !dataNode) return;
+
+          const portrait = JSON.parse(dataNode.textContent || "\"\"");
+          if (window.marked) {
+            content.innerHTML = portrait ? window.marked.parse(portrait) : "No portrait on file.";
+            content.classList.add("prose", "prose-sm", "max-w-none");
+          } else {
+            content.textContent = portrait || "No portrait on file.";
+          }
+        };
+
+        document.addEventListener("DOMContentLoaded", renderCustomerPortrait);
+        document.addEventListener("turbo:load", renderCustomerPortrait);
+      })();
+    </script>
+  </section>
+
+  <section class="rounded-sm border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-6 py-4">
+      <h2 class="text-lg font-semibold">Conversations</h2>
+      <p class="text-sm text-slate-500">Most recent voice interactions.</p>
+    </div>
+    <div class="divide-y divide-slate-100">
+      <% @conversations.each do |conversation| %>
+        <%= link_to admin_conversation_path(conversation), class: "flex flex-wrap items-start justify-between gap-4 px-6 py-5 hover:bg-slate-50" do %>
+          <div class="min-w-0 space-y-2">
+            <p class="text-sm font-semibold text-slate-900"><%= conversation.summary.presence || "Conversation without summary" %></p>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span class="font-medium text-slate-600"><%= conversation.channel.capitalize %></span>
+              <span class="text-slate-300">•</span>
+              <% iso_time = conversation.created_at.iso8601 %>
+              <time class="timeago" data-iso="<%= iso_time %>" title="<%= l(conversation.created_at, format: :long) %>">
+                <%= l(conversation.created_at, format: :short) %>
+              </time>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-500">
+            <span class="rounded-sm border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600"><%= conversation.status %></span>
+            <span class="rounded-sm border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Voice</span>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+</div>
+
+<script>
+  (() => {
+    const initTimeago = () => {
+      const formatRelative = (date) => {
+        const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (seconds < 30) return "just now";
+        if (seconds < 90) return "1 min ago";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} mins ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hrs ago`;
+        const days = Math.floor(hours / 24);
+        return `${days} days ago`;
+      };
+
+      const updateTimes = () => {
+        document.querySelectorAll(".timeago").forEach((node) => {
+          const iso = node.dataset.iso;
+          if (!iso) return;
+          const date = new Date(iso);
+          if (Number.isNaN(date.getTime())) return;
+          node.textContent = formatRelative(date);
+          node.title = date.toLocaleString();
+        });
+      };
+
+      updateTimes();
+      if (window.customerTimeagoInterval) {
+        clearInterval(window.customerTimeagoInterval);
+      }
+      window.customerTimeagoInterval = setInterval(updateTimes, 60000);
+    };
+
+    document.addEventListener("DOMContentLoaded", initTimeago);
+    document.addEventListener("turbo:load", initTimeago);
+    document.addEventListener("turbo:after-stream-render", initTimeago);
+  })();
+</script>

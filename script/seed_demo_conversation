@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require_relative "../config/environment"
+
+slug = ARGV.first.presence || "rev-cycle-ideation-session"
+conversation = DemoScenarioSeedService.new(slug: slug).call
+host = ENV.fetch("ATHENA_BASE_URL", "http://127.0.0.1:3001")
+
+puts JSON.pretty_generate(
+  ok: true,
+  scenario: slug,
+  conversation_id: conversation.id,
+  customer_id: conversation.customer_id,
+  idea_capture_id: conversation.idea_captures.order(:created_at).last&.id,
+  action_draft_id: conversation.action_drafts.order(:created_at).last&.id,
+  admin_url: "#{host}/admin/conversations/#{conversation.id}",
+  ideas_url: "#{host}/admin/idea_captures",
+  timeline_entries: ConversationTimeline.new(conversation.reload).entries.map(&:title)
+)

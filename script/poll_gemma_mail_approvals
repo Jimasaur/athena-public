@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+require_relative "../config/environment"
+
+result = GemmaMailDiscordApprovalPoller.new(
+  limit: ENV.fetch("LIMIT", GemmaMailDiscordApprovalPoller::DEFAULT_LIMIT).to_i
+).call
+
+puts JSON.pretty_generate(result)
+exit(result[:ok] ? 0 : 1)

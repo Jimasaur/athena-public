@@ -1,0 +1,200 @@
+<%= render "admin/shared/page_header",
+  title: "Contacts",
+  subtitle: "Recent contacts and their profiles." do %>
+  <%= link_to "New contact", new_admin_customer_path, class: "rounded-sm bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800" %>
+<% end %>
+
+<div class="grid gap-6 xl:grid-cols-3">
+  <section class="xl:col-span-2 rounded-sm border border-slate-100 bg-white shadow-sm">
+    <div class="divide-y divide-slate-100">
+      <% @customers.each do |customer| %>
+        <div class="group flex items-center justify-between px-6 py-5 transition hover:bg-slate-50">
+          <%= link_to admin_customer_path(customer), class: "flex flex-1 items-center justify-between" do %>
+            <div>
+              <p class="text-sm font-semibold text-slate-900 group-hover:text-slate-700">
+                <%= customer.name.presence || "Unknown caller" %>
+                <% if customer.greeting_name.present? %>
+                  <span class="font-medium text-slate-500">(<%= customer.greeting_name %>)</span>
+                <% end %>
+              </p>
+              <p class="text-xs text-slate-600"><%= format_phone(customer.phone_number) %></p>
+            </div>
+          <% end %>
+          <%= link_to admin_customer_path(customer), data: { turbo_method: :delete, turbo_confirm: "Remove this contact and all associated conversations?" }, class: "ml-4 rounded-sm border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:border-red-300 hover:bg-red-100" do %>
+            Delete
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <aside class="space-y-4">
+    <section class="rounded-sm border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-900">Outbound call</h2>
+      </div>
+      <p class="mt-1 text-xs text-slate-600">Call a contact using a selected agent.</p>
+      <%= form_with url: admin_outbound_calls_path, method: :post, local: true, class: "mt-4 space-y-3" do |form| %>
+        <div class="relative" data-patient-combobox>
+          <%= form.label :phone_number, "Contact or phone number", class: "text-xs font-medium text-slate-700" %>
+          <%= hidden_field_tag :patient_id, params[:patient_id], data: { patient_combobox_target: "patientId" } %>
+          <%= text_field_tag :phone_number, params[:phone_number], placeholder: "Search contact or enter phone number", class: "mt-1 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100", autocomplete: "off", data: { patient_combobox_target: "input" } %>
+          <div class="absolute z-10 mt-2 hidden w-full overflow-hidden rounded-sm border border-slate-200 bg-white shadow-lg" data-patient-combobox-target="menu">
+            <div class="max-h-64 overflow-auto py-1 text-sm text-slate-700">
+              <% @customers.each do |customer| %>
+                <button type="button"
+                  class="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50"
+                  data-patient-combobox-target="option"
+                  data-patient-id="<%= customer.id %>"
+                  data-patient-name="<%= customer.name.presence || "Unknown caller" %>"
+                  data-patient-phone="<%= customer.phone_number %>">
+                  <span class="font-medium text-slate-900"><%= customer.name.presence || "Unknown caller" %></span>
+                  <span class="text-xs text-slate-500"><%= format_phone(customer.phone_number) %></span>
+                </button>
+              <% end %>
+            </div>
+          </div>
+          <p class="mt-1 text-xs text-slate-600">Pick a contact or type a phone number directly.</p>
+        </div>
+        <div class="relative" data-agent-combobox>
+          <%= form.label :agent_setting_id, "Agent", class: "text-xs font-medium text-slate-700" %>
+          <%= hidden_field_tag :agent_setting_id, params[:agent_setting_id], data: { agent_combobox_target: "agentId" } %>
+          <%= text_field_tag :agent_label, nil, placeholder: "Select an agent", class: "mt-1 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100", autocomplete: "off", data: { agent_combobox_target: "input" } %>
+          <div class="absolute z-10 mt-2 hidden w-full overflow-hidden rounded-sm border border-slate-200 bg-white shadow-lg" data-agent-combobox-target="menu">
+            <div class="max-h-64 overflow-auto py-1 text-sm text-slate-700">
+              <% @agent_settings.each do |agent| %>
+                <% agent_label = "#{agent.name.presence || agent.agent_id} · #{format_phone(agent.twilio_number)}" %>
+                <button type="button"
+                  class="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50"
+                  data-agent-combobox-target="option"
+                  data-agent-id="<%= agent.id %>"
+                  data-agent-label="<%= agent_label %>">
+                  <span class="font-medium text-slate-900"><%= agent.name.presence || agent.agent_id %></span>
+                  <span class="text-xs text-slate-500"><%= format_phone(agent.twilio_number) %></span>
+                </button>
+              <% end %>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end">
+          <%= form.submit "Place call", class: "rounded-sm bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500" %>
+        </div>
+      <% end %>
+    </section>
+  </aside>
+</div>
+
+<script>
+  (() => {
+    const initPatientCombobox = () => {
+      document.querySelectorAll("[data-patient-combobox]").forEach((wrapper) => {
+        if (wrapper.dataset.initialized === "true") return;
+        wrapper.dataset.initialized = "true";
+
+        const input = wrapper.querySelector("[data-patient-combobox-target='input']");
+        const menu = wrapper.querySelector("[data-patient-combobox-target='menu']");
+        const patientId = wrapper.querySelector("[data-patient-combobox-target='patientId']");
+        const options = Array.from(wrapper.querySelectorAll("[data-patient-combobox-target='option']"));
+        if (!input || !menu || !patientId) return;
+
+        const openMenu = () => menu.classList.remove("hidden");
+        const closeMenu = () => menu.classList.add("hidden");
+
+        const filterOptions = (value) => {
+          const query = value.toLowerCase();
+          options.forEach((option) => {
+            const name = option.dataset.patientName?.toLowerCase() || "";
+            const phone = option.dataset.patientPhone?.toLowerCase() || "";
+            const match = name.includes(query) || phone.includes(query);
+            option.classList.toggle("hidden", !match);
+          });
+        };
+
+        input.addEventListener("focus", () => {
+          openMenu();
+          filterOptions(input.value);
+        });
+
+        input.addEventListener("input", () => {
+          patientId.value = "";
+          openMenu();
+          filterOptions(input.value);
+        });
+
+        options.forEach((option) => {
+          option.addEventListener("click", () => {
+            input.value = option.dataset.patientPhone || "";
+            patientId.value = option.dataset.patientId || "";
+            closeMenu();
+          });
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!wrapper.contains(event.target)) {
+            closeMenu();
+          }
+        });
+      });
+    };
+
+    document.addEventListener("DOMContentLoaded", initPatientCombobox);
+    document.addEventListener("turbo:load", initPatientCombobox);
+  })();
+</script>
+
+<script>
+  (() => {
+    const initAgentCombobox = () => {
+      document.querySelectorAll("[data-agent-combobox]").forEach((wrapper) => {
+        if (wrapper.dataset.initialized === "true") return;
+        wrapper.dataset.initialized = "true";
+
+        const input = wrapper.querySelector("[data-agent-combobox-target='input']");
+        const menu = wrapper.querySelector("[data-agent-combobox-target='menu']");
+        const agentId = wrapper.querySelector("[data-agent-combobox-target='agentId']");
+        const options = Array.from(wrapper.querySelectorAll("[data-agent-combobox-target='option']"));
+        if (!input || !menu || !agentId) return;
+
+        const openMenu = () => menu.classList.remove("hidden");
+        const closeMenu = () => menu.classList.add("hidden");
+
+        const filterOptions = (value) => {
+          const query = value.toLowerCase();
+          options.forEach((option) => {
+            const label = option.dataset.agentLabel?.toLowerCase() || "";
+            const match = label.includes(query);
+            option.classList.toggle("hidden", !match);
+          });
+        };
+
+        input.addEventListener("focus", () => {
+          openMenu();
+          filterOptions(input.value);
+        });
+
+        input.addEventListener("input", () => {
+          agentId.value = "";
+          openMenu();
+          filterOptions(input.value);
+        });
+
+        options.forEach((option) => {
+          option.addEventListener("click", () => {
+            input.value = option.dataset.agentLabel || "";
+            agentId.value = option.dataset.agentId || "";
+            closeMenu();
+          });
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!wrapper.contains(event.target)) {
+            closeMenu();
+          }
+        });
+      });
+    };
+
+    document.addEventListener("DOMContentLoaded", initAgentCombobox);
+    document.addEventListener("turbo:load", initAgentCombobox);
+  })();
+</script>

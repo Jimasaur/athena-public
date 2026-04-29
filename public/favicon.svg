@@ -1,0 +1,8 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="athenaFaviconTitle athenaFaviconDesc">
+  <title id="athenaFaviconTitle">Athena favicon</title>
+  <desc id="athenaFaviconDesc">Athena signal mark.</desc>
+  <rect x="10" y="10" width="108" height="108" rx="22" fill="#111718"/>
+  <path d="M36 86V42L64 70L92 42V86" stroke="#F7F7F2" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36 36H92" stroke="#C8D94A" stroke-width="8" stroke-linecap="round"/>
+  <path d="M31 96C50 105 78 105 97 96" stroke="#0F766E" stroke-width="7" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "smoke_support"
+
+report = SmokeReport.new("Athena Twilio voice webhooks")
+session = SmokeSupport.session
+agent = SmokeSupport.smoke_agent
+call_sid = ENV.fetch("CALL_SID", "SMOKE-TWILIO-#{SecureRandom.hex(4)}")
+from_number = SmokeSupport.allowed_smoke_caller
+
+report.check("inbound OpenAI Realtime TwiML") do
+  session.post "/voice/inbound",
+    params: {
+      "CallSid" => call_sid,
+      "From" => from_number,
+      "To" => agent.twilio_number
+    }
+
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}: #{session.response.body}")
+  report.assert(session.response.body.include?("/ws/twilio-media"), "expected media stream URL")
+  report.assert(session.response.body.include?("/webhooks/twilio/transcription"), "expected transcription callback")
+  report.assert(session.response.body.include?("name=\"provider\" value=\"openai_realtime\""), "expected OpenAI Realtime provider")
+
+  conversation = Conversation.find_by!(twilio_call_sid: call_sid)
+  report.assert(conversation.call_state.present?, "expected call state")
+  report.assert(conversation.call_state.provider == "openai_realtime", "expected OpenAI Realtime call state")
+end
+
+report.check("status webhook") do
+  session.post "/voice/outbound/status",
+    params: {
+      "CallSid" => call_sid,
+      "CallStatus" => "completed",
+      "Direction" => "outbound-api",
+      "From" => agent.twilio_number,
+      "To" => from_number
+    }
+
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  conversation = Conversation.find_by!(twilio_call_sid: call_sid)
+  report.assert(conversation.call_events.order(:created_at).last.status == "completed", "expected completed call event")
+end
+
+report.check("transcription webhook") do
+  session.post "/webhooks/twilio/transcription",
+    params: {
+      "CallSid" => call_sid,
+      "Track" => "inbound",
+      "TranscriptionText" => "This is a smoke transcription.",
+      "Timestamp" => Time.current.iso8601
+    }
+
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  conversation = Conversation.find_by!(twilio_call_sid: call_sid)
+  report.assert(conversation.messages.where(content: "This is a smoke transcription.").exists?, "expected message from transcription")
+end
+
+report.finish!(
+  call_sid: call_sid,
+  conversation_id: Conversation.find_by(twilio_call_sid: call_sid)&.id
+)

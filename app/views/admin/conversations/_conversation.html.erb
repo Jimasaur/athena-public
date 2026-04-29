@@ -1,0 +1,31 @@
+<% review_state = ConversationReviewState.new(conversation).to_h %>
+
+<div id="<%= dom_id(conversation) %>" class="group flex items-center justify-between px-6 py-5 transition hover:bg-[#eef7f4]">
+  <%= link_to admin_conversation_path(conversation), class: "flex flex-1 flex-wrap items-start justify-between gap-6" do %>
+    <div class="min-w-0 flex-1 space-y-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-sm font-semibold text-[#182023] group-hover:text-[#0f766e]">
+          <%= conversation.customer.name.presence || "Unknown caller" %>
+        </p>
+        <span class="rounded-sm border border-[#dfe5dc] bg-[#f7f7f2] px-2.5 py-0.5 text-[11px] uppercase text-[#66716d]"><%= conversation.status %></span>
+        <span class="rounded-sm border px-2.5 py-0.5 text-[11px] font-semibold <%= review_state[:badge_classes] %>"><%= review_state[:label] %></span>
+      </div>
+      <p class="text-xs text-[#66716d]">
+        <%= format_phone(conversation.customer.phone_number) %> · <%= conversation.channel.capitalize %>
+      </p>
+      <p class="text-sm leading-6 text-[#4f5d58]"><%= conversation.summary.presence || review_state[:next_action] %></p>
+      <% if review_state[:key] != :captured %>
+        <p class="inline-flex items-center gap-1.5 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-2.5 py-1 text-xs text-[#66716d]">
+          <i class="ti <%= review_state[:icon] %> text-[#0f766e]" aria-hidden="true"></i>
+          <span><%= review_state[:detail] %></span>
+        </p>
+      <% end %>
+    </div>
+    <div class="flex items-center whitespace-nowrap text-xs text-[#66716d]">
+      <% iso_time = conversation.created_at.iso8601 %>
+      <time class="timeago" data-iso="<%= iso_time %>" title="<%= l(conversation.created_at, format: :long) %>">
+        <%= l(conversation.created_at, format: :short) %>
+      </time>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,223 @@
+<% content_for(:title, "#{@use_case[:title]} | Athena Voice Ops Control") %>
+
+<section class="border-b border-[#dfe5dc] bg-[#f7f7f2]">
+  <div class="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6">
+    <nav class="flex flex-wrap items-center justify-between gap-4 text-sm">
+      <%= link_to root_path, class: "flex items-center gap-3" do %>
+        <%= image_tag "athena-logo.svg", class: "h-10 w-auto", alt: "Athena" %>
+      <% end %>
+      <div class="flex flex-wrap items-center gap-4 font-medium text-[#66716d]">
+        <%= link_to "Use cases", use_cases_path, class: "text-[#182023]" %>
+        <%= link_to "Dashboard", admin_root_path, class: "hover:text-[#182023]" %>
+        <%= link_to "Console", admin_conversations_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#0f766e] px-3 py-1.5 font-semibold text-[#0f766e] hover:bg-[#e8f3ef]" %>
+      </div>
+    </nav>
+  </div>
+</section>
+
+<section class="bg-[#f7f7f2]">
+  <div class="mx-auto w-full max-w-6xl px-4 pb-14 pt-12 sm:px-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="inline-flex items-center gap-2 rounded-sm border border-[#bfddd6] bg-[#e8f3ef] px-3 py-1 text-xs font-semibold uppercase text-[#0f766e]">
+        <i class="ti ti-<%= @use_case[:icon] %> text-base"></i>
+        <%= @use_case[:space] %>
+      </span>
+      <span class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-1 text-xs font-medium text-[#66716d]"><%= @use_case[:transport] %></span>
+      <span class="rounded-sm border border-[#d95f54]/30 bg-[#d95f54]/10 px-3 py-1 text-xs font-semibold text-[#9d332c]"><%= @use_case[:maturity] %></span>
+    </div>
+
+    <h1 class="mt-6 max-w-5xl text-4xl font-semibold leading-tight text-[#182023] md:text-6xl"><%= @use_case[:headline] %></h1>
+    <p class="mt-6 max-w-3xl text-lg leading-8 text-[#4f5d58]"><%= @use_case[:summary] %></p>
+
+    <div class="mt-8 flex flex-wrap gap-3">
+      <%= link_to use_cases_path, class: "brand-primary-action inline-flex items-center gap-2 rounded-sm border px-4 py-2 text-sm font-semibold shadow-sm" do %>
+        <i class="ti ti-layout-grid"></i>
+        View all use cases
+      <% end %>
+      <%= link_to admin_root_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-4 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
+        <i class="ti ti-dashboard"></i>
+        Open demo cockpit
+      <% end %>
+    </div>
+
+    <div class="mt-12 grid gap-4 border-y border-[#dfe5dc] py-5 md:grid-cols-3">
+      <div>
+        <p class="text-xs font-semibold uppercase text-[#8a9690]">Primary user</p>
+        <p class="mt-2 text-sm leading-6 text-[#4f5d58]"><%= @use_case[:audience] %></p>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase text-[#8a9690]">Promise</p>
+        <p class="mt-2 text-sm leading-6 text-[#4f5d58]"><%= @use_case[:promise] %></p>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase text-[#8a9690]">State focus</p>
+        <p class="mt-2 text-sm leading-6 text-[#4f5d58]"><%= @use_case[:state_focus] %></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="bg-[#fffffb]">
+  <div class="mx-auto grid w-full max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
+    <div>
+      <p class="brand-kicker">Call flow</p>
+      <h2 class="mt-3 text-3xl font-semibold text-[#182023]">How the pilot works.</h2>
+      <p class="mt-4 leading-7 text-[#4f5d58]">
+        The caller gets a simple voice experience. Athena keeps the durable record while sidecars watch the conversation, update compact state, and prepare reviewable next steps.
+      </p>
+    </div>
+    <div class="grid gap-3">
+      <% @use_case[:workflow].each_with_index do |step, index| %>
+        <div class="flex items-center gap-4 border-l-2 border-[#0f766e] bg-[#f7f7f2] px-4 py-3">
+          <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-[#111718] text-sm font-semibold text-[#c8d94a]"><%= index + 1 %></span>
+          <span class="font-medium text-[#182023]"><%= step %></span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</section>
+
+<section class="bg-[#f7f7f2]">
+  <div class="mx-auto grid w-full max-w-6xl gap-6 px-4 py-14 sm:px-6 lg:grid-cols-3">
+    <div class="brand-panel rounded-sm p-6">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]">
+        <i class="ti ti-target-arrow text-xl"></i>
+      </span>
+      <h2 class="mt-5 text-xl font-semibold text-[#182023]">Core actions</h2>
+      <ul class="mt-4 space-y-3 text-sm leading-6 text-[#4f5d58]">
+        <% @use_case[:primary_actions].each do |action| %>
+          <li class="flex gap-3">
+            <i class="ti ti-check mt-1 text-[#0f766e]"></i>
+            <span><%= action %></span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+
+    <div class="brand-panel rounded-sm p-6">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[#d8d2f1] bg-[#f0edf9] text-[#6554c0]">
+        <i class="ti ti-circuit-cell text-xl"></i>
+      </span>
+      <h2 class="mt-5 text-xl font-semibold text-[#182023]">Sidecars</h2>
+      <ul class="mt-4 space-y-3 text-sm leading-6 text-[#4f5d58]">
+        <% @use_case[:sidecars].each do |sidecar| %>
+          <li class="flex gap-3">
+            <i class="ti ti-arrow-narrow-right mt-1 text-[#6554c0]"></i>
+            <code class="break-all rounded-sm border border-[#bfddd6] bg-[#eef7f4] px-2 py-1 text-xs text-[#0d4f4a]"><%= sidecar %></code>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+
+    <div class="brand-panel rounded-sm p-6">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[#e8beb9] bg-[#fbecea] text-[#d95f54]">
+        <i class="ti ti-report-analytics text-xl"></i>
+      </span>
+      <h2 class="mt-5 text-xl font-semibold text-[#182023]">Outcomes</h2>
+      <ul class="mt-4 space-y-3 text-sm leading-6 text-[#4f5d58]">
+        <% @use_case[:outcomes].each do |outcome| %>
+          <li class="flex gap-3">
+            <i class="ti ti-circle-dot mt-1 text-[#d95f54]"></i>
+            <span><%= outcome %></span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="bg-[#fffffb]">
+  <div class="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <div>
+        <p class="brand-kicker">User stories</p>
+        <h2 class="mt-3 text-3xl font-semibold text-[#182023]">Real workflows to design around.</h2>
+      </div>
+      <p class="max-w-xl text-sm leading-6 text-[#66716d]">
+        These stories mix normal caller journeys, operational handoffs, edge cases, and architecture constraints so the pilot can grow without becoming brittle.
+      </p>
+    </div>
+
+    <div class="mt-8 grid gap-4 lg:grid-cols-2">
+      <% @use_case[:user_stories].each_with_index do |story, index| %>
+        <article class="rounded-sm border border-[#dfe5dc] bg-[#f7f7f2] p-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-[#111718] text-xs font-semibold text-[#c8d94a]"><%= index + 1 %></span>
+              <div>
+                <p class="text-xs font-semibold uppercase text-[#8a9690]"><%= story[:actor] %></p>
+                <h3 class="text-base font-semibold text-[#182023]"><%= story[:title] %></h3>
+              </div>
+            </div>
+            <span class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-2.5 py-1 text-xs font-medium text-[#66716d]"><%= story[:kind] %></span>
+          </div>
+          <p class="mt-4 text-sm leading-6 text-[#33413d]"><%= story[:story] %></p>
+          <div class="mt-5 grid gap-3 text-sm md:grid-cols-2">
+            <div class="border-l-2 border-[#6554c0] pl-3">
+              <p class="text-xs font-semibold uppercase text-[#8a9690]">Architecture</p>
+              <p class="mt-1 leading-6 text-[#4f5d58]"><%= story[:architecture] %></p>
+            </div>
+            <div class="border-l-2 border-[#0f766e] pl-3">
+              <p class="text-xs font-semibold uppercase text-[#8a9690]">Experience</p>
+              <p class="mt-1 leading-6 text-[#4f5d58]"><%= story[:experience] %></p>
+            </div>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  </div>
+</section>
+
+<section class="bg-[#f7f7f2]">
+  <div class="mx-auto grid w-full max-w-6xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-2">
+    <div>
+      <p class="brand-kicker">MVP</p>
+      <h2 class="mt-3 text-3xl font-semibold text-[#182023]">What to prove first.</h2>
+      <div class="mt-6 divide-y divide-[#dfe5dc] border-y border-[#dfe5dc]">
+        <% @use_case[:mvp].each_with_index do |item, index| %>
+          <div class="flex gap-4 py-4">
+            <span class="text-sm font-semibold text-[#8a9690]"><%= (index + 1).to_s.rjust(2, "0") %></span>
+            <p class="text-sm leading-6 text-[#33413d]"><%= item %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    <div>
+      <p class="brand-kicker">Risks</p>
+      <h2 class="mt-3 text-3xl font-semibold text-[#182023]">What to keep bounded.</h2>
+      <div class="mt-6 divide-y divide-[#dfe5dc] border-y border-[#dfe5dc]">
+        <% @use_case[:risks].each do |risk| %>
+          <div class="flex gap-4 py-4">
+            <i class="ti ti-alert-triangle mt-1 text-[#d95f54]"></i>
+            <p class="text-sm leading-6 text-[#33413d]"><%= risk %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="border-t border-[#dfe5dc] bg-[#fffffb]">
+  <div class="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <div>
+        <p class="brand-kicker">Related in <%= @use_case[:space] %></p>
+        <h2 class="mt-3 text-3xl font-semibold text-[#182023]">Compare the paired track.</h2>
+      </div>
+      <%= link_to "All use cases", use_cases_path, class: "inline-flex items-center rounded-sm border border-[#dfe5dc] bg-[#f7f7f2] px-4 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#eef7f4]" %>
+    </div>
+    <div class="mt-8 grid gap-4 md:grid-cols-2">
+      <% @related_use_cases.each do |use_case| %>
+        <%= link_to use_case_path(use_case[:slug]), class: "group brand-panel rounded-sm p-5 transition hover:border-[#0f766e]" do %>
+          <p class="text-xs font-semibold uppercase text-[#8a9690]"><%= use_case[:transport] %></p>
+          <h3 class="mt-3 text-lg font-semibold text-[#182023]"><%= use_case[:short_title] %></h3>
+          <p class="mt-2 text-sm leading-6 text-[#66716d]"><%= use_case[:summary] %></p>
+          <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#0f766e]">
+            Open page
+            <i class="ti ti-arrow-right transition group-hover:translate-x-0.5"></i>
+          </span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</section>

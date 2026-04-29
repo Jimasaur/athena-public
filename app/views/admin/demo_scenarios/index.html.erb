@@ -1,0 +1,225 @@
+<%= render "admin/shared/page_header",
+  title: "Demo Scenarios",
+  subtitle: "Seed polished call records, test the live phone path, and show the sidecar chain end to end",
+  back: { label: "Back to dashboard", path: admin_root_path },
+  right_class: "flex flex-wrap items-center gap-2" do %>
+  <%= link_to admin_conversations_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
+    <%= tabler_icon("phone-call", size: 16) %>
+    Conversation queue
+  <% end %>
+  <%= button_to seed_all_admin_demo_scenarios_path, method: :post, class: "brand-primary-action inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-sm font-semibold shadow-sm" do %>
+    <%= tabler_icon("database-import", size: 16) %>
+    Seed all demos
+  <% end %>
+<% end %>
+
+<section class="brand-panel rounded-sm">
+  <div class="border-b border-[#dfe5dc] px-6 py-5">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="max-w-3xl">
+        <p class="brand-kicker">Live call demo</p>
+        <h2 class="mt-2 text-2xl font-semibold text-[#182023]">Call Athena and show the real chain</h2>
+        <p class="mt-2 text-sm leading-6 text-[#4f5d58]">
+          Use the mapped Twilio number for the live voice path, then open the newest conversation to show transcript capture,
+          call state, idea capture, sidecar events, Discord reporting, and the audit trail.
+        </p>
+      </div>
+      <div class="rounded-sm border border-[#bfddd6] bg-[#e8f3ef] px-3 py-2 text-xs font-semibold text-[#0f766e]">
+        Idea reports stay safe for non-PHI testing
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
+    <div class="border-b border-[#dfe5dc] p-6 lg:border-b-0 lg:border-r">
+      <h3 class="text-sm font-semibold text-[#182023]">Numbers to call</h3>
+      <div class="mt-3 space-y-3">
+        <% if @live_demo[:phone_numbers].any? %>
+          <% @live_demo[:phone_numbers].each do |number| %>
+            <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm font-semibold text-[#182023]"><%= number[:name] %></p>
+                <span class="font-mono text-sm font-semibold text-[#0f766e]"><%= format_phone(number[:number]) %></span>
+              </div>
+              <p class="mt-1 text-xs text-[#66716d]">Agent <%= number[:agent_id] %> · <%= number[:tools_count] %> configured tools</p>
+              <% if number[:first_message].present? %>
+                <p class="mt-2 text-xs leading-5 text-[#4f5d58]"><%= number[:first_message] %></p>
+              <% end %>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="rounded-sm border border-[#e2d96c] bg-[#fbfadf] p-4 text-sm text-[#6e6b17]">
+            No Twilio number is mapped to an agent yet. Add one under Agents before the live phone demo.
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-5 space-y-2 text-xs text-[#66716d]">
+        <p class="font-semibold text-[#33413d]">Webhook targets</p>
+        <p class="break-all font-mono"><%= @live_demo[:voice_webhook_url] %></p>
+        <p class="break-all font-mono"><%= @live_demo[:stream_url] %></p>
+        <p class="break-all font-mono"><%= @live_demo[:tool_command_url] %></p>
+      </div>
+
+      <div class="mt-5 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase text-[#8a9690]">Live monitor</p>
+            <% current_call = @latest_live_conversation || @latest_conversation %>
+            <% if current_call.present? %>
+              <p class="mt-1 text-sm font-semibold text-[#182023]"><%= current_call.customer.name.presence || "Unknown caller" %></p>
+              <p class="text-xs text-[#66716d]"><%= current_call.agent_name.presence || current_call.channel.capitalize %> · <%= current_call.status.humanize %> · <%= l(current_call.created_at, format: :short) %></p>
+            <% else %>
+              <p class="mt-1 text-sm font-semibold text-[#182023]">No calls yet</p>
+              <p class="text-xs text-[#66716d]">The newest conversation will appear here after the first call.</p>
+            <% end %>
+          </div>
+          <% if current_call.present? %>
+            <%= link_to admin_conversation_path(current_call), class: "inline-flex items-center gap-2 rounded-sm border border-[#bfddd6] bg-[#e8f3ef] px-3 py-2 text-xs font-semibold text-[#0f766e] hover:bg-[#eef7f4]" do %>
+              <%= tabler_icon("external-link", size: 15) %>
+              Open newest call
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6">
+      <h3 class="text-sm font-semibold text-[#182023]">Call script</h3>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <% [
+          ["Start", "Call the mapped Twilio number and share a rough rev cycle improvement idea."],
+          ["Shape idea", "Let Athena ask for the problem, proposed solution, impact, risk, and next step."],
+          ["Show sidecars", "Open the newest conversation and point at Operator brief, Call state, Timeline, and Ideas."],
+          ["Close", "Open the idea card and show the Discord report or report-failed sidecar event."]
+        ].each_with_index do |(title, detail), index| %>
+          <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+            <div class="flex items-center gap-2">
+              <span class="flex h-6 w-6 items-center justify-center rounded-sm bg-[#0f766e] text-xs font-semibold text-white"><%= index + 1 %></span>
+              <p class="text-sm font-semibold text-[#182023]"><%= title %></p>
+            </div>
+            <p class="mt-2 text-sm leading-5 text-[#4f5d58]"><%= detail %></p>
+          </div>
+        <% end %>
+      </div>
+
+      <h3 class="mt-6 text-sm font-semibold text-[#182023]">Functions to show off</h3>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <% @live_demo[:function_prompts].each do |tool| %>
+          <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-semibold text-[#182023]"><%= tool[:name] %></p>
+              <span class="rounded-sm border border-[#dfe5dc] px-2 py-0.5 font-mono text-[11px] text-[#66716d]"><%= tool[:endpoint] %></span>
+            </div>
+            <p class="mt-2 text-sm font-semibold text-[#0f766e]"><%= tool[:phrase] %></p>
+            <p class="mt-1 text-xs leading-5 text-[#66716d]"><%= tool[:value] %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+  <% @live_demo[:readiness].each do |item| %>
+    <div class="brand-panel rounded-sm p-4">
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm font-semibold text-[#182023]"><%= item[:label] %></p>
+        <% if item[:ready] %>
+          <span class="rounded-sm border border-[#bfddd6] bg-[#e8f3ef] px-2 py-1 text-xs font-semibold text-[#0f766e]">Ready</span>
+        <% else %>
+          <span class="rounded-sm border border-[#e2d96c] bg-[#fbfadf] px-2 py-1 text-xs font-semibold text-[#6e6b17]">Pending</span>
+        <% end %>
+      </div>
+      <% if item[:detail].present? %>
+        <p class="mt-2 break-all text-xs leading-5 text-[#66716d]"><%= item[:detail] %></p>
+      <% end %>
+    </div>
+  <% end %>
+</section>
+
+<section class="mt-8">
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="brand-kicker">Seeded scenarios</p>
+      <h2 class="mt-2 text-2xl font-semibold text-[#182023]">Four demos for the Athena retreat workflows</h2>
+    </div>
+    <p class="max-w-xl text-sm leading-6 text-[#66716d]">
+      Each launch creates a realistic conversation with transcript, analysis, state patches, sidecar events, one idea card, and one approval-gated demo action.
+    </p>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <% @scenarios.each do |scenario| %>
+      <% seeded_conversation = @demo_conversations_by_slug[scenario[:slug]] %>
+      <% status = scenario[:action_status] %>
+      <% status_classes = case status
+        when ActionDraft::APPROVED_STATUS
+          "border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]"
+        when ActionDraft::EXECUTED_STATUS
+          "border-[#d8d2f1] bg-[#f0edf9] text-[#6554c0]"
+        when ActionDraft::REJECTED_STATUS, ActionDraft::EXECUTION_FAILED_STATUS
+          "border-[#e8beb9] bg-[#fbecea] text-[#9d332c]"
+        else
+          "border-[#e2d96c] bg-[#fbfadf] text-[#6e6b17]"
+        end %>
+      <article class="brand-panel rounded-sm p-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-[#bfddd6] bg-[#eef7f4] text-[#0f766e]">
+                <%= tabler_icon(scenario[:icon], size: 18) %>
+              </span>
+              <p class="text-xs font-semibold uppercase text-[#8a9690]"><%= scenario[:space] %> · <%= scenario[:transport] %></p>
+            </div>
+            <h3 class="mt-3 text-lg font-semibold text-[#182023]"><%= scenario[:title] %></h3>
+            <p class="mt-2 text-sm leading-6 text-[#4f5d58]"><%= scenario[:demo_goal] %></p>
+          </div>
+          <span class="rounded-sm border px-2.5 py-1 text-xs font-semibold <%= status_classes %>"><%= status.humanize %></span>
+        </div>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-3">
+            <p class="text-xs font-semibold uppercase text-[#8a9690]">Caller</p>
+            <p class="mt-1 text-sm font-semibold text-[#182023]"><%= scenario.dig(:caller, :name) %></p>
+            <p class="text-xs text-[#66716d]"><%= format_phone(scenario.dig(:caller, :phone)) %></p>
+          </div>
+          <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-3">
+            <p class="text-xs font-semibold uppercase text-[#8a9690]">Intent</p>
+            <p class="mt-1 text-sm font-semibold text-[#182023]"><%= scenario.dig(:intent, "label").to_s.humanize %></p>
+            <p class="text-xs text-[#66716d]"><%= scenario.dig(:risk, "level").to_s.humanize %> risk</p>
+          </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <% scenario[:showcase].each do |item| %>
+            <span class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-2 py-1 text-xs font-medium text-[#66716d]"><%= item %></span>
+          <% end %>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <div class="max-w-md">
+            <p class="text-sm leading-5 text-[#66716d]"><%= scenario[:operator_takeaway] %></p>
+            <% if seeded_conversation.present? %>
+              <p class="mt-2 text-xs font-semibold text-[#0f766e]">Ready as conversation #<%= seeded_conversation.id %></p>
+            <% else %>
+              <p class="mt-2 text-xs font-semibold text-[#6e6b17]">Not seeded yet</p>
+            <% end %>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <% if seeded_conversation.present? %>
+              <%= link_to admin_conversation_path(seeded_conversation), class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
+                <%= tabler_icon("external-link", size: 16) %>
+                Open
+              <% end %>
+            <% end %>
+            <%= button_to launch_admin_demo_scenario_path(scenario[:slug]), method: :post, class: "brand-primary-action inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-sm font-semibold shadow-sm" do %>
+              <%= tabler_icon("player-play", size: 16) %>
+              <%= seeded_conversation.present? ? "Refresh" : "Launch" %>
+            <% end %>
+          </div>
+        </div>
+      </article>
+    <% end %>
+  </div>
+</section>

@@ -1,0 +1,23 @@
+twilio_account_sid:
+  key: TWILIO_ACCOUNT_SID
+  value: AC_fixture_sid
+
+twilio_auth_token:
+  key: TWILIO_AUTH_TOKEN
+  value: fixture_auth_token
+
+public_base_url:
+  key: PUBLIC_BASE_URL
+  value: https://config.example.test
+
+gemma_mail_approval_channel:
+  key: GEMMA_MAIL_APPROVAL_CHANNEL
+  value: discord
+
+gemma_mail_approval_target:
+  key: GEMMA_MAIL_APPROVAL_TARGET
+  value: channel:fixture-channel
+
+gemma_mail_approval_session_id:
+  key: GEMMA_MAIL_APPROVAL_SESSION_ID
+  value: gemma-mail-discord-session

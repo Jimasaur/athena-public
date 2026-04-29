@@ -1,0 +1,23 @@
+<% back = local_assigns[:back] %>
+<% subtitle = local_assigns[:subtitle] %>
+<% right_class = local_assigns[:right_class] || "flex flex-wrap items-center gap-2" %>
+
+<div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+  <div>
+    <% if back %>
+      <%= link_to back[:path], class: "inline-flex items-center gap-1 text-xs font-medium text-[#66716d] hover:text-[#182023]" do %>
+        <%= tabler_icon("arrow-left", size: 14, class_name: "text-[#8a9690]") %>
+        <span><%= back[:label] %></span>
+      <% end %>
+    <% end %>
+    <h1 class="mt-2 text-3xl font-semibold text-[#182023]"><%= title %></h1>
+    <% if subtitle.present? %>
+      <p class="text-base text-[#66716d]"><%= subtitle %></p>
+    <% end %>
+  </div>
+  <% if block_given? %>
+    <div class="<%= right_class %>">
+      <%= yield %>
+    </div>
+  <% end %>
+</div>

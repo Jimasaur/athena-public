@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+
+if [ -d "$HOME/.rbenv" ]; then
+  export RBENV_ROOT="${RBENV_ROOT:-$HOME/.rbenv}"
+  export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+fi
+
+if ! gem list foreman -i --silent; then
+  echo "Installing foreman..."
+  gem install foreman
+  if command -v rbenv >/dev/null 2>&1; then
+    rbenv rehash
+  fi
+fi
+
+# Default to port 3000 if not specified
+export PORT="${PORT:-3000}"
+
+# Let the debug gem allow remote connections,
+# but avoid loading until `debugger` is called
+export RUBY_DEBUG_OPEN="true"
+export RUBY_DEBUG_LAZY="true"
+
+exec foreman start -f Procfile.dev "$@"

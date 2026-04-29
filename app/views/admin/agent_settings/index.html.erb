@@ -1,0 +1,81 @@
+<%= render "admin/shared/page_header",
+  title: "Agents",
+  subtitle: "Manage local OpenAI Realtime profiles." do %>
+  <%= link_to "New agent", new_admin_agent_setting_path, class: "rounded-sm bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800" %>
+<% end %>
+
+<div class="grid gap-6 xl:grid-cols-3">
+  <section class="xl:col-span-2 overflow-hidden rounded-sm border border-slate-100 bg-white shadow-sm">
+    <table class="w-full text-left text-sm text-slate-700">
+      <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-6 py-3">Agent</th>
+          <th class="px-6 py-3">Realtime voice</th>
+          <th class="px-6 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        <% @agent_settings.each do |agent_setting| %>
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-6 py-4">
+              <%= link_to admin_agent_setting_path(agent_setting), class: "block" do %>
+                <p class="font-semibold text-slate-900 hover:text-slate-700"><%= agent_setting.name.presence || "Unnamed agent" %></p>
+                <p class="mt-1 text-xs text-slate-600"><%= agent_setting.agent_id %></p>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-slate-600">
+              <%= agent_setting.voice_id.presence || AppSetting.fetch("OPENAI_REALTIME_VOICE", "marin") %>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <%= link_to "Edit", edit_admin_agent_setting_path(agent_setting), class: "inline-flex items-center rounded-sm border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-100" %>
+            </td>
+          </tr>
+        <% end %>
+        <% if @agent_settings.empty? %>
+          <tr>
+            <td colspan="3" class="px-6 py-8 text-center text-sm text-slate-500">No agents configured yet.</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+
+  <aside class="space-y-4">
+    <section class="rounded-sm border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-900">Phone numbers</h2>
+        <span class="text-xs text-slate-400"><%= @twilio_numbers.size %> total</span>
+      </div>
+      <p class="mt-1 text-xs text-slate-600">Mapped to agents by inbound phone number.</p>
+      <% if @twilio_error.present? %>
+        <p class="mt-3 text-xs text-rose-600"><%= @twilio_error %></p>
+      <% end %>
+      <div class="mt-4 space-y-3">
+        <% @twilio_numbers.each do |number| %>
+          <div class="rounded-sm border border-slate-300 bg-slate-50 px-3 py-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-medium text-slate-900"><%= format_phone(number[:phone_number]) %></p>
+              <% if number[:agent_name].present? %>
+                <span class="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Mapped</span>
+              <% else %>
+                <span class="rounded-sm border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Unassigned</span>
+              <% end %>
+            </div>
+            <p class="mt-1 flex items-center gap-1 text-xs text-slate-600">
+              <span class="font-medium text-slate-700"><%= number[:friendly_name].presence || "Twilio number" %></span>
+              <%= tabler_icon("arrow-right", size: 14, class_name: "text-slate-400") %>
+              <% if number[:agent_name].present? %>
+                <span class="font-medium text-slate-700"><%= number[:agent_name] %></span>
+              <% else %>
+                <span class="text-slate-500">No agent assigned</span>
+              <% end %>
+            </p>
+          </div>
+        <% end %>
+        <% if @twilio_numbers.empty? && @twilio_error.blank? %>
+          <p class="text-xs text-slate-500">No Twilio phone numbers found.</p>
+        <% end %>
+      </div>
+    </section>
+  </aside>
+</div>

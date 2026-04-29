@@ -1,0 +1,9 @@
+<div id="<%= dom_id(message) %>" class="flex items-start gap-3">
+  <% role_label = message.role == "assistant" ? "A" : "U" %>
+  <% role_styles = message.role == "assistant" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700" %>
+  <span class="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-sm text-xs font-semibold <%= role_styles %>"><%= role_label %></span>
+  <div class="flex-1">
+    <p class="text-sm text-slate-700"><%= message.content %></p>
+    <p class="mt-1 text-[11px] uppercase tracking-wide text-slate-400"><%= message.role %> · <%= l(message.sent_at, format: :short) %></p>
+  </div>
+</div>

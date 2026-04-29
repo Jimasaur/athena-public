@@ -1,0 +1,107 @@
+<%= turbo_stream_from "conversations" %>
+
+<%= render "admin/shared/page_header",
+  title: "Conversations",
+  subtitle: "Review, route, and act on AI-handled calls",
+  right_class: "flex flex-wrap items-center gap-2 text-xs text-[#66716d]" do %>
+  <%= form_with url: admin_conversations_path, method: :get, local: true, class: "flex flex-wrap items-center gap-2 text-xs text-[#66716d]" do |form| %>
+    <%= hidden_field_tag :review, @selected_review if @selected_review.present? %>
+    <%= form.label :agent_name, "Agent", class: "font-semibold text-[#66716d]" %>
+    <div class="relative" data-controller="agent-filter">
+      <%= hidden_field_tag :agent_name, @selected_agent, data: { agent_filter_target: "input" } %>
+      <button type="button" class="inline-flex min-w-[12rem] items-center justify-between gap-3 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-1.5 text-xs font-semibold text-[#33413d] shadow-sm hover:bg-[#eef7f4] focus:border-[#0f766e] focus:outline-none focus:ring-2 focus:ring-[#e8f3ef]" data-action="click->agent-filter#toggle" data-agent-filter-target="trigger">
+        <span data-agent-filter-target="label"><%= @selected_agent.presence || "All agents" %></span>
+        <%= tabler_icon("chevron-down", size: 16, class_name: "text-[#66716d]") %>
+      </button>
+      <div class="absolute right-0 z-10 mt-2 hidden min-w-[12rem] overflow-hidden rounded-sm border border-[#dfe5dc] bg-[#fffffb] shadow-lg" data-agent-filter-target="menu">
+        <button type="button" class="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold text-[#33413d] hover:bg-[#eef7f4]" data-action="click->agent-filter#select" data-value="">
+          <span>All agents</span>
+        </button>
+        <% @agent_options.each do |name| %>
+          <button type="button" class="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold text-[#33413d] hover:bg-[#eef7f4]" data-action="click->agent-filter#select" data-value="<%= name %>">
+            <span><%= name %></span>
+          </button>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+<% end %>
+
+<section class="mb-4 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-3 shadow-sm">
+  <div class="flex flex-wrap items-center gap-2">
+    <% [
+      ["all", "All"],
+      ["needs_review", "Needs review"],
+      ["ready_to_send", "Ready to send"],
+      ["executed", "Executed"],
+      ["failed", "Failed"]
+    ].each do |key, label| %>
+      <% active = (@selected_review.presence || "all") == key %>
+      <% path = admin_conversations_path(agent_name: @selected_agent, review: (key == "all" ? nil : key)) %>
+      <%= link_to path, class: "inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-xs font-semibold #{active ? "border-[#0f766e] bg-[#e8f3ef] text-[#0f766e]" : "border-[#dfe5dc] bg-[#f7f7f2] text-[#66716d] hover:bg-[#eef7f4] hover:text-[#182023]"}" do %>
+        <span><%= label %></span>
+        <span class="rounded-sm bg-[#fffffb] px-1.5 py-0.5 font-mono text-[11px]"><%= @review_counts.fetch(key, 0) %></span>
+      <% end %>
+    <% end %>
+  </div>
+</section>
+
+<section class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] shadow-sm">
+  <div id="conversations" class="divide-y divide-[#dfe5dc]">
+    <%= render partial: "conversation", collection: @conversations, as: :conversation %>
+  </div>
+  <div class="flex items-center justify-between border-t border-[#dfe5dc] px-6 py-4 text-sm text-[#66716d]">
+    <span>
+      <% start_index = @total_count.zero? ? 0 : ((@page - 1) * @per_page + 1) %>
+      <% end_index = [@page * @per_page, @total_count].min %>
+      Showing <%= start_index %>-<%= end_index %> of <%= @total_count %>
+    </span>
+    <div class="flex items-center gap-2">
+      <% if @page > 1 %>
+        <%= link_to "Previous", admin_conversations_path(page: @page - 1, agent_name: @selected_agent, review: @selected_review), class: "rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-1.5 text-xs font-medium text-[#33413d] hover:bg-[#eef7f4]" %>
+      <% end %>
+      <% if @page < @total_pages %>
+        <%= link_to "Next", admin_conversations_path(page: @page + 1, agent_name: @selected_agent, review: @selected_review), class: "rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-1.5 text-xs font-medium text-[#33413d] hover:bg-[#eef7f4]" %>
+      <% end %>
+    </div>
+  </div>
+</section>
+
+<script>
+  (() => {
+    const initTimeago = () => {
+      const formatRelative = (date) => {
+        const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (seconds < 30) return "just now";
+        if (seconds < 90) return "1 min ago";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} mins ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hrs ago`;
+        const days = Math.floor(hours / 24);
+        return `${days} days ago`;
+      };
+
+      const updateTimes = () => {
+        document.querySelectorAll(".timeago").forEach((node) => {
+          const iso = node.dataset.iso;
+          if (!iso) return;
+          const date = new Date(iso);
+          if (Number.isNaN(date.getTime())) return;
+          node.textContent = formatRelative(date);
+          node.title = date.toLocaleString();
+        });
+      };
+
+      updateTimes();
+      if (window.timeagoInterval) {
+        clearInterval(window.timeagoInterval);
+      }
+      window.timeagoInterval = setInterval(updateTimes, 60000);
+    };
+
+    document.addEventListener("DOMContentLoaded", initTimeago);
+    document.addEventListener("turbo:load", initTimeago);
+    document.addEventListener("turbo:after-stream-render", initTimeago);
+  })();
+</script>

@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  customer: one
+  channel: voice
+  status: open
+  summary: Asked about shipment ETA and delivery window.
+
+two:
+  customer: two
+  channel: voice
+  status: closed
+  summary: Asked about store hours and return policy.

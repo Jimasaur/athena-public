@@ -1,0 +1,29 @@
+<%= form_with model: [:admin, @app_setting], class: "space-y-6" do |form| %>
+  <% if @app_setting.errors.any? %>
+    <div class="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <p class="font-semibold">Please fix the following:</p>
+      <ul class="mt-2 list-disc pl-5">
+        <% @app_setting.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :key, class: "text-sm font-medium text-slate-700" %>
+    <%= form.text_field :key, placeholder: "TWILIO_ACCOUNT_SID", class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-sm uppercase text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <p class="mt-1 text-xs text-slate-500">Uppercase letters, numbers, and underscores only.</p>
+  </div>
+
+  <div>
+    <%= form.label :value, class: "text-sm font-medium text-slate-700" %>
+    <%= form.text_area :value, rows: 4, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <p class="mt-1 text-xs text-slate-500">Database values take precedence over the .env fallback when present.</p>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <%= form.submit class: "rounded-sm border border-slate-200 bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800" %>
+    <%= link_to "Cancel", admin_app_settings_path, class: "text-sm text-slate-500 hover:text-slate-700" %>
+  </div>
+<% end %>

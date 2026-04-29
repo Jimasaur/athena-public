@@ -1,0 +1,269 @@
+<%= render "admin/shared/page_header",
+  title: "Configuration",
+  subtitle: "Manage runtime app variables inline." %>
+
+<section class="mb-6 overflow-hidden rounded-sm border border-slate-100 bg-white shadow-sm">
+  <div class="border-b border-slate-100 px-6 py-5">
+    <h2 class="text-base font-semibold text-slate-900">OpenAI Realtime</h2>
+    <p class="mt-1 text-sm text-slate-500">Tune model, voice, transcription, and turn detection for live calls.</p>
+  </div>
+
+  <%= form_with url: realtime_admin_app_settings_path, method: :patch, local: true, class: "px-6 py-5" do %>
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <% @realtime_settings.each do |setting| %>
+        <% key = setting.fetch(:key) %>
+        <% input = setting[:input].presence || "text" %>
+        <% stored_value = setting[:value].to_s %>
+        <% default_value = setting[:default].to_s %>
+        <% field_value = setting[:secret] ? "" : stored_value.presence || default_value %>
+        <% placeholder = setting[:placeholder].presence || default_value %>
+
+        <div class="<%= "md:col-span-2 xl:col-span-3" if input == "textarea" %>">
+          <div class="flex items-center justify-between gap-3">
+            <%= label_tag "realtime_#{key}", setting.fetch(:label), class: "text-sm font-medium text-slate-700" %>
+            <% if setting[:suffix].present? %>
+              <span class="text-xs text-slate-400"><%= setting[:suffix] %></span>
+            <% elsif setting[:secret] && setting[:present] %>
+              <span class="text-xs text-emerald-600">Stored</span>
+            <% end %>
+          </div>
+          <p class="mt-1 font-mono text-[11px] uppercase text-slate-400"><%= key %></p>
+
+          <% if input == "select" %>
+            <%= select_tag "realtime[#{key}]",
+              options_for_select(setting.fetch(:options), field_value),
+              id: "realtime_#{key}",
+              class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+          <% elsif input == "boolean" %>
+            <%= select_tag "realtime[#{key}]",
+              options_for_select([ [ "Enabled", "true" ], [ "Disabled", "false" ] ], field_value.presence || default_value),
+              id: "realtime_#{key}",
+              class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+          <% elsif input == "number" %>
+            <%= number_field_tag "realtime[#{key}]",
+              field_value,
+              id: "realtime_#{key}",
+              min: setting[:min],
+              max: setting[:max],
+              step: setting[:step],
+              placeholder: placeholder,
+              class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+          <% elsif input == "textarea" %>
+            <%= text_area_tag "realtime[#{key}]",
+              field_value,
+              id: "realtime_#{key}",
+              rows: 4,
+              placeholder: placeholder,
+              class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+          <% else %>
+            <%= text_field_tag "realtime[#{key}]",
+              field_value,
+              id: "realtime_#{key}",
+              type: input,
+              placeholder: placeholder,
+              autocomplete: setting[:secret] ? "new-password" : "off",
+              class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="mt-5 flex items-center justify-end">
+      <%= button_tag type: "submit", class: "inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800" do %>
+        <%= tabler_icon("device-floppy", size: 16, alt: "Save") %>
+        <span>Save Realtime Settings</span>
+      <% end %>
+    </div>
+  <% end %>
+</section>
+
+<section class="overflow-hidden rounded-sm border border-slate-100 bg-white shadow-sm">
+  <table class="w-full text-left text-sm text-slate-700">
+    <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+      <tr>
+        <th class="px-6 py-3">Key</th>
+        <th class="px-6 py-3">Value</th>
+        <th class="px-6 py-3 text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-200">
+      <% @app_settings.each do |app_setting| %>
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-6 py-4 align-top">
+            <div data-inline-editor class="w-full">
+              <button type="button" data-inline-display class="inline-flex max-w-full items-center border-b border-dotted border-slate-400 pb-0.5 font-mono text-xs uppercase text-slate-900 hover:border-slate-600">
+                <span class="truncate"><%= app_setting.key %></span>
+              </button>
+              <%= form_with url: admin_app_setting_path(app_setting), method: :patch, local: true, class: "hidden w-full items-center gap-2", data: { inline_form: true } do %>
+                <%= hidden_field_tag "app_setting[value]", app_setting.value %>
+                <%= text_field_tag "app_setting[key]",
+                  app_setting.key,
+                  class: "w-full border-0 border-b border-slate-300 bg-transparent px-0 py-0.5 font-mono text-xs uppercase text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-0",
+                  data: { inline_input: true } %>
+                <button type="submit" data-inline-action="save" class="inline-flex items-center gap-1 rounded-sm border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50" aria-label="Save" title="Save">
+                  <%= tabler_icon("check", size: 14, alt: "Save") %>
+                  <span>Save</span>
+                </button>
+                <button type="button" data-inline-action="discard" data-inline-cancel class="inline-flex h-6 w-6 items-center justify-center rounded-sm text-slate-500 transition hover:bg-slate-100" aria-label="Discard" title="Discard">
+                  <%= tabler_icon("x", size: 14, alt: "Discard") %>
+                </button>
+              <% end %>
+            </div>
+          </td>
+          <td class="px-6 py-4 align-top">
+            <div data-inline-editor class="w-full">
+              <button type="button" data-inline-display class="inline-flex max-w-full items-center border-b border-dotted border-slate-400 pb-0.5 font-mono text-xs text-slate-700 hover:border-slate-600">
+                <span class="truncate"><%= app_setting.value.presence || "Not set" %></span>
+              </button>
+              <%= form_with url: admin_app_setting_path(app_setting), method: :patch, local: true, class: "hidden w-full items-center gap-2", data: { inline_form: true } do %>
+                <%= hidden_field_tag "app_setting[key]", app_setting.key %>
+                <%= text_field_tag "app_setting[value]",
+                  app_setting.value,
+                  placeholder: "Not set",
+                  class: "w-full border-0 border-b border-slate-300 bg-transparent px-0 py-0.5 font-mono text-xs text-slate-700 focus:border-orange-400 focus:outline-none focus:ring-0",
+                  data: { inline_input: true } %>
+                <button type="submit" data-inline-action="save" class="inline-flex items-center gap-1 rounded-sm border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50" aria-label="Save" title="Save">
+                  <%= tabler_icon("check", size: 14, alt: "Save") %>
+                  <span>Save</span>
+                </button>
+                <button type="button" data-inline-action="discard" data-inline-cancel class="inline-flex h-6 w-6 items-center justify-center rounded-sm text-slate-500 transition hover:bg-slate-100" aria-label="Discard" title="Discard">
+                  <%= tabler_icon("x", size: 14, alt: "Discard") %>
+                </button>
+              <% end %>
+            </div>
+          </td>
+          <td class="px-6 py-4 align-top">
+            <div class="flex items-center justify-end gap-2">
+              <%= link_to edit_admin_app_setting_path(app_setting), class: "inline-flex items-center gap-1 rounded-sm border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50", aria: { label: "Edit #{app_setting.key}" } do %>
+                <%= tabler_icon("pencil", size: 14, alt: "Edit") %>
+                <span>Edit</span>
+              <% end %>
+              <%= button_to admin_app_setting_path(app_setting), method: :delete, form: { data: { turbo_confirm: "Delete #{app_setting.key}?" } }, class: "inline-flex items-center gap-1 rounded-sm border border-rose-200 px-3 py-2 text-xs font-medium text-rose-700 shadow-sm hover:bg-rose-50", aria: { label: "Delete #{app_setting.key}" } do %>
+                <%= tabler_icon("trash", size: 14, alt: "Delete") %>
+                <span>Delete</span>
+              <% end %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+
+      <tr>
+        <td colspan="3" class="px-6 py-4">
+          <div data-new-variable-inline class="rounded-sm border border-dashed border-slate-300 bg-slate-50/60 p-3">
+            <button type="button" data-new-variable-trigger class="flex w-full items-center justify-center rounded-sm px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-800">
+              <span>+ Click to add a new variable</span>
+            </button>
+
+            <%= form_with model: [:admin, @new_app_setting], local: true, class: "hidden grid gap-3 sm:grid-cols-[1fr_1fr_auto]" do |form| %>
+              <%= form.text_field :key,
+                placeholder: "NEW_VARIABLE_KEY",
+                class: "w-full rounded-sm border border-slate-300 bg-white px-3 py-2 font-mono text-xs uppercase text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+              <%= form.text_field :value,
+                placeholder: "Add a value",
+                class: "w-full rounded-sm border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+              <div class="flex items-center gap-2">
+                <%= form.submit "Add", class: "inline-flex items-center rounded-sm border border-slate-200 bg-slate-900 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-slate-800" %>
+                <button type="button" data-new-variable-cancel class="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-slate-200 bg-white text-slate-500 hover:bg-slate-100" aria-label="Cancel adding variable">
+                  <%= tabler_icon("x", size: 14, alt: "Discard") %>
+                </button>
+              </div>
+            <% end %>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<script>
+  (() => {
+    const initInlineEditors = () => {
+      const editors = Array.from(document.querySelectorAll("[data-inline-editor]"));
+      let activeEditor = null;
+
+      const closeEditor = (editor) => {
+        if (!editor) return;
+        const display = editor.querySelector("[data-inline-display]");
+        const form = editor.querySelector("[data-inline-form]");
+        const input = editor.querySelector("[data-inline-input]");
+        const initialValue = editor.dataset.initialValue || "";
+        if (!display || !form || !input) return;
+        input.value = initialValue;
+        form.classList.add("hidden");
+        form.classList.remove("flex");
+        display.classList.remove("hidden");
+        if (activeEditor === editor) activeEditor = null;
+      };
+
+      editors.forEach((editor) => {
+        if (editor.dataset.initialized === "true") return;
+        editor.dataset.initialized = "true";
+
+        const display = editor.querySelector("[data-inline-display]");
+        const form = editor.querySelector("[data-inline-form]");
+        const input = editor.querySelector("[data-inline-input]");
+        const cancel = editor.querySelector("[data-inline-cancel]");
+        if (!display || !form || !input || !cancel) return;
+        editor.dataset.initialValue = input.value;
+
+        const openEditor = () => {
+          if (activeEditor && activeEditor !== editor) {
+            closeEditor(activeEditor);
+          }
+          display.classList.add("hidden");
+          form.classList.add("flex");
+          form.classList.remove("hidden");
+          activeEditor = editor;
+          if (typeof input.focus === "function") input.focus();
+          if (typeof input.select === "function" && input.tagName === "INPUT") input.select();
+        };
+
+        display.addEventListener("click", openEditor);
+        cancel.addEventListener("click", () => closeEditor(editor));
+        form.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            closeEditor(editor);
+          }
+        });
+      });
+    };
+
+    const initNewVariableInline = () => {
+      document.querySelectorAll("[data-new-variable-inline]").forEach((container) => {
+        if (container.dataset.initialized === "true") return;
+        container.dataset.initialized = "true";
+
+        const trigger = container.querySelector("[data-new-variable-trigger]");
+        const form = container.querySelector("form");
+        const cancel = container.querySelector("[data-new-variable-cancel]");
+        const keyInput = container.querySelector("input[name='app_setting[key]']");
+        const valueInput = container.querySelector("input[name='app_setting[value]']");
+        if (!trigger || !form || !cancel || !keyInput || !valueInput) return;
+
+        const openForm = () => {
+          trigger.classList.add("hidden");
+          form.classList.remove("hidden");
+          form.classList.add("grid");
+          keyInput.focus();
+        };
+
+        const closeForm = () => {
+          keyInput.value = "";
+          valueInput.value = "";
+          form.classList.add("hidden");
+          form.classList.remove("grid");
+          trigger.classList.remove("hidden");
+        };
+
+        trigger.addEventListener("click", openForm);
+        cancel.addEventListener("click", closeForm);
+      });
+    };
+
+    document.addEventListener("DOMContentLoaded", initInlineEditors);
+    document.addEventListener("turbo:load", initInlineEditors);
+    document.addEventListener("DOMContentLoaded", initNewVariableInline);
+    document.addEventListener("turbo:load", initNewVariableInline);
+  })();
+</script>

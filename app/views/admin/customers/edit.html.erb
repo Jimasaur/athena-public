@@ -1,0 +1,8 @@
+<%= render "admin/shared/page_header",
+  title: "Edit contact",
+  subtitle: "Update contact details and metadata.",
+  back: { label: "Back to contact", path: admin_customer_path(@customer) } %>
+
+<section class="rounded-sm border border-slate-200 bg-white p-6 shadow-sm">
+  <%= render "form" %>
+</section>

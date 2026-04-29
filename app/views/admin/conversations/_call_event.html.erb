@@ -1,0 +1,5 @@
+<div id="<%= dom_id(call_event) %>" class="px-4 py-3 text-xs text-slate-600" data-status="<%= call_event.status %>">
+  <p class="font-semibold text-slate-700"><%= call_event.status %></p>
+  <p><%= call_event.direction %> · <%= l(call_event.created_at, format: :short) %></p>
+  <p class="text-slate-500"><%= call_event.twilio_call_sid %></p>
+</div>

@@ -1,0 +1,18 @@
+one:
+  call_state: one
+  conversation: one
+  kind: follow_up_message
+  status: pending_approval
+  created_by: follow_up_drafter
+  recipient:
+    name: Avery Johnson
+    phone: "+14155550100"
+  content:
+    body: |-
+      Hi Avery,
+
+      Thanks for the call. I captured the shipment ETA request for review.
+  approval_required: true
+  external_side_effect:
+    type: send_message
+    executed: false

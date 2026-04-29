@@ -1,0 +1,130 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "smoke_support"
+
+report = SmokeReport.new("Athena sidecar review and SMS execution")
+session = SmokeSupport.session
+agent = SmokeSupport.smoke_agent
+live_sms = ENV["LIVE_SMS"] == "1"
+
+if live_sms && ENV["SMS_TO"].blank?
+  report.check("live SMS safety") do
+    raise "Set SMS_TO=+15555550123 when LIVE_SMS=1"
+  end
+  report.finish!(live_sms: true)
+end
+
+caller_phone = live_sms ? ENV.fetch("SMS_TO") : ENV.fetch("CALLER_PHONE", "+14155550177")
+customer = SmokeSupport.smoke_customer(phone_number: caller_phone)
+call_sid = ENV.fetch("CALL_SID", "SMOKE-SIDECAR-#{SecureRandom.hex(4)}")
+
+conversation = customer.conversations.create!(
+  channel: "voice",
+  status: "completed",
+  summary: "Smoke caller asked for a short follow-up text.",
+  agent_name: agent.name.presence || "Smoke Agent",
+  twilio_call_sid: call_sid,
+  call_started_at: 90.seconds.ago
+)
+call_event = conversation.call_events.create!(
+  twilio_call_sid: call_sid,
+  status: "completed",
+  direction: "inbound",
+  from_number: customer.phone_number,
+  to_number: agent.twilio_number,
+  data: { source: "smoke_sidecar_review_execute" }
+)
+conversation.messages.create!(role: "assistant", content: "Hi, this is Athena.", sent_at: 88.seconds.ago)
+conversation.messages.create!(role: "user", content: "Please text me the recap.", sent_at: 82.seconds.ago)
+conversation.messages.create!(role: "assistant", content: "I will prepare that for review.", sent_at: 75.seconds.ago)
+
+report.check("post-call sidecar draft") do
+  result = AthenaPostCallSidecarService.new(conversation: conversation, call_event: call_event).call
+
+  report.assert(result[:ok] == true, "expected sidecar success")
+  report.assert(conversation.call_state.present?, "expected call state")
+  report.assert(conversation.sidecar_events.where(kind: "summary.created").exists?, "expected summary event")
+  report.assert(conversation.action_drafts.where(status: ActionDraft::PENDING_APPROVAL_STATUS).exists?, "expected pending draft")
+end
+
+draft = conversation.action_drafts.order(:created_at).last
+
+report.check("approve draft") do
+  result = ActionDraftReviewService.new(
+    action_draft: draft,
+    decision: "approve",
+    reviewer: "smoke"
+  ).call
+
+  report.assert(result[:ok] == true, "expected approval result")
+  report.assert(draft.reload.status == ActionDraft::APPROVED_STATUS, "expected approved draft")
+  report.assert(conversation.sidecar_events.where(kind: "action_draft.approved").exists?, "expected approval event")
+end
+
+original_twilio_new = nil
+original_fetch = nil
+fake_messages = nil
+
+unless live_sms
+  fake_messages = Class.new do
+    attr_reader :last_params
+
+    def create(params)
+      @last_params = params
+      Struct.new(:sid).new("SM-SMOKE-#{SecureRandom.hex(4)}")
+    end
+  end.new
+
+  fake_client = Struct.new(:messages).new(fake_messages)
+  original_twilio_new = Twilio::REST::Client.method(:new)
+  Twilio::REST::Client.define_singleton_method(:new) { |*| fake_client }
+
+  original_fetch = AppSetting.method(:fetch)
+  AppSetting.define_singleton_method(:fetch) do |key, *args, &block|
+    normalized = normalize_key(key)
+    case normalized
+    when "TWILIO_ACCOUNT_SID"
+      original_fetch.call(key, *args, &block).presence || "AC_smoke"
+    when "TWILIO_AUTH_TOKEN"
+      original_fetch.call(key, *args, &block).presence || "smoke_auth_token"
+    else
+      original_fetch.call(key, *args, &block)
+    end
+  end
+end
+
+begin
+  report.check(live_sms ? "execute approved draft with live Twilio SMS" : "execute approved draft with fake Twilio SMS") do
+    result = ActionDraftExecutionService.new(action_draft: draft, executor: "smoke").call
+    report.assert(result.ok, "expected execution success: #{result.error}")
+    report.assert(draft.reload.status == ActionDraft::EXECUTED_STATUS, "expected executed draft")
+    report.assert(conversation.sidecar_events.where(kind: "external_action.executed").exists?, "expected execution event")
+
+    unless live_sms
+      report.assert(fake_messages.last_params[:to] == customer.phone_number, "expected fake SMS recipient")
+      report.assert(fake_messages.last_params[:body].present?, "expected fake SMS body")
+    end
+  end
+ensure
+  unless live_sms
+    Twilio::REST::Client.define_singleton_method(:new) do |*args, &block|
+      original_twilio_new.call(*args, &block)
+    end
+
+    AppSetting.define_singleton_method(:fetch) do |*args, &block|
+      original_fetch.call(*args, &block)
+    end
+  end
+end
+
+report.finish!(
+  live_sms: live_sms,
+  call_sid: call_sid,
+  conversation_id: conversation.id,
+  action_draft_id: draft.id,
+  action_draft_status: draft.reload.status,
+  twilio_message_sid: draft.external_side_effect["external_id"],
+  fake_sms_to: fake_messages&.last_params&.dig(:to),
+  fake_sms_from: fake_messages&.last_params&.dig(:from)
+)

@@ -1,0 +1,8 @@
+<%= render "admin/shared/page_header",
+  title: "Edit agent settings",
+  subtitle: "Update the local OpenAI Realtime profile.",
+  back: { label: "Back to agent", path: admin_agent_setting_path(@agent_setting) } %>
+
+<section class="rounded-sm border border-slate-200 bg-white p-6 shadow-sm">
+  <%= render "form" %>
+</section>

@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  phone_number: "+14155550100"
+  name: Avery Johnson
+  greeting_name: Avery
+  metadata: { company: Northwind Logistics, plan: Premium }
+  customer_portrait: |-
+    ## Portrait
+    - VIP: true
+
+two:
+  phone_number: "+14155550133"
+  name: Morgan Lee
+  metadata: { company: Acme Retail, plan: Standard }

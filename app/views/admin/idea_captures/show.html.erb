@@ -1,0 +1,70 @@
+<%= render "admin/shared/page_header",
+  title: @idea_capture.title,
+  subtitle: "#{@idea_capture.category.presence || "Uncategorized"} · #{@idea_capture.caller_name}",
+  back: { label: "Back to ideas", path: admin_idea_captures_path },
+  right_class: "flex flex-wrap items-center gap-2 text-xs text-[#66716d]" do %>
+  <%= link_to admin_conversation_path(@conversation), class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
+    <%= tabler_icon("phone-call", size: 16) %>
+    Conversation
+  <% end %>
+<% end %>
+
+<div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+  <section class="brand-panel rounded-sm p-6">
+    <p class="brand-kicker">Idea card</p>
+    <dl class="mt-5 space-y-5 text-sm">
+      <div>
+        <dt class="font-semibold text-[#182023]">Problem</dt>
+        <dd class="mt-2 leading-6 text-[#4f5d58]"><%= @idea_capture.problem.presence || "Not captured yet." %></dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-[#182023]">Proposed solution</dt>
+        <dd class="mt-2 leading-6 text-[#4f5d58]"><%= @idea_capture.proposed_solution.presence || "Not captured yet." %></dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-[#182023]">Impact hypothesis</dt>
+        <dd class="mt-2 leading-6 text-[#4f5d58]"><%= @idea_capture.impact.presence || "Not captured yet." %></dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-[#182023]">Next step</dt>
+        <dd class="mt-2 leading-6 text-[#4f5d58]"><%= @idea_capture.next_step.presence || "Review during retreat." %></dd>
+      </div>
+    </dl>
+  </section>
+
+  <aside class="space-y-6">
+    <section class="brand-panel rounded-sm p-5">
+      <h2 class="text-sm font-semibold text-[#182023]">Metadata</h2>
+      <dl class="mt-4 space-y-3 text-xs text-[#66716d]">
+        <div class="flex justify-between gap-3">
+          <dt>Status</dt>
+          <dd class="font-semibold text-[#33413d]"><%= @idea_capture.status %></dd>
+        </div>
+        <div class="flex justify-between gap-3">
+          <dt>Department</dt>
+          <dd class="font-semibold text-[#33413d]"><%= @idea_capture.department.presence || "Revenue Cycle" %></dd>
+        </div>
+        <div class="flex justify-between gap-3">
+          <dt>Captured</dt>
+          <dd class="font-semibold text-[#33413d]"><%= l(@idea_capture.created_at, format: :long) %></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="brand-panel rounded-sm p-5">
+      <h2 class="text-sm font-semibold text-[#182023]">Workshop Prompt</h2>
+      <p class="mt-3 text-sm leading-6 text-[#4f5d58]"><%= @idea_capture.payload.to_h["workshop_prompt"].presence || "What would need to be true to pilot this safely in 30-60 days?" %></p>
+    </section>
+  </aside>
+</div>
+
+<section class="brand-panel mt-6 rounded-sm">
+  <div class="border-b border-[#dfe5dc] px-6 py-4">
+    <h2 class="text-lg font-semibold text-[#182023]">Transcript Evidence</h2>
+  </div>
+  <div class="space-y-3 p-6">
+    <% Array(@idea_capture.payload.to_h["transcript"]).each do |line| %>
+      <p class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-4 py-3 text-sm leading-6 text-[#4f5d58]"><%= line %></p>
+    <% end %>
+  </div>
+</section>

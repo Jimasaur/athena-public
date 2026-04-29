@@ -1,0 +1,3 @@
+web: RAILS_MAX_THREADS=8 bin/rails server -b 0.0.0.0
+css: bin/rails tailwindcss:watch
+approvals: script/watch_gemma_mail_approvals

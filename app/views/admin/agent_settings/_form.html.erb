@@ -1,0 +1,71 @@
+<%= form_with model: [:admin, @agent_setting], class: "space-y-6" do |form| %>
+  <% if @agent_setting.errors.any? %>
+    <div class="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <p class="font-semibold">Please fix the following:</p>
+      <ul class="mt-2 list-disc pl-5">
+        <% @agent_setting.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid gap-4 md:grid-cols-2">
+    <div>
+      <%= form.label :agent_id, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :agent_id, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    </div>
+    <div>
+      <%= form.label :name, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :name, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    </div>
+  </div>
+
+  <div>
+    <%= form.label :system_prompt, "System prompt", class: "text-sm font-medium text-slate-700" %>
+    <%= form.text_area :system_prompt, rows: 8, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <p class="mt-1 text-xs text-slate-500">Used directly as the OpenAI Realtime session instructions for this profile.</p>
+  </div>
+
+  <div>
+    <%= form.label :first_message, "First greeting", class: "text-sm font-medium text-slate-700" %>
+    <%= form.text_area :first_message, rows: 3, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <p class="mt-1 text-xs text-slate-500">Used as Athena's opening guidance for OpenAI Realtime calls.</p>
+  </div>
+
+  <div>
+    <%= form.label :voice_id, "OpenAI Realtime voice", class: "text-sm font-medium text-slate-700" %>
+    <%= form.text_field :voice_id, placeholder: AppSetting.fetch("OPENAI_REALTIME_VOICE", "marin"), class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <p class="mt-1 text-xs text-slate-500">Leave blank to use the global Realtime voice.</p>
+  </div>
+
+  <div>
+    <%= form.label :twilio_number, "Twilio number", class: "text-sm font-medium text-slate-700" %>
+    <% if @twilio_number_options.present? %>
+      <%= form.select :twilio_number,
+        options_for_select(@twilio_number_options, @agent_setting.twilio_number),
+        { include_blank: "Select a Twilio number" },
+        class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <% else %>
+      <%= form.text_field :twilio_number, placeholder: "+14155551234", class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <% end %>
+    <p class="mt-1 text-xs text-slate-500">Selecting a number updates its Twilio webhooks when Athena has Twilio credentials. Imported Realtime numbers can still be attached before that.</p>
+  </div>
+
+  <div>
+    <%= form.label :tool_url, "Tool URL", class: "text-sm font-medium text-slate-700" %>
+    <%= form.text_field :tool_url, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+  </div>
+
+  <div>
+    <%= form.label :tools_json, "Tools JSON", class: "text-sm font-medium text-slate-700" %>
+    <%= form.text_area :tools_json, value: JSON.pretty_generate(@agent_setting.tools || []), rows: 8, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+    <p class="mt-1 text-xs text-slate-500">Optional profile notes for Athena tools. The Realtime bridge injects the active tool schema automatically.</p>
+  </div>
+
+  <% cancel_path = @agent_setting.persisted? ? admin_agent_setting_path(@agent_setting) : admin_agent_settings_path %>
+  <div class="flex items-center gap-3">
+    <%= form.submit class: "rounded-sm border border-slate-200 bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-slate-800" %>
+    <%= link_to "Cancel", cancel_path, class: "text-sm text-slate-500 hover:text-slate-700" %>
+  </div>
+<% end %>

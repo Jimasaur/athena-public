@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Athena" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Athena">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="min-h-screen bg-[#f7f7f2] text-[#182023] antialiased">
+    <%= render "admin/shared/nav" %>
+    <% if flash.any? %>
+      <div class="pointer-events-none fixed right-6 top-20 z-50 w-full max-w-sm space-y-2">
+        <% flash.each do |type, message| %>
+          <% next if message.blank? %>
+          <% color_classes = type.to_s == "notice" ? "border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]" : "border-[#e8beb9] bg-[#fbecea] text-[#9d332c]" %>
+          <% timeout_ms = type.to_s == "notice" ? 3000 : 6000 %>
+          <div class="flash-toast pointer-events-auto rounded-sm border px-4 py-3 text-sm shadow-sm <%= color_classes %>" data-timeout="<%= timeout_ms %>">
+            <%= message %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+    <% main_width = content_for?(:main_width) ? content_for(:main_width) : "max-w-6xl" %>
+    <main class="mx-auto w-full px-6 pb-10 pt-0 <%= main_width %>">
+      <%= yield %>
+    </main>
+    <script>
+      (() => {
+        const dismissToasts = () => {
+          document.querySelectorAll(".flash-toast").forEach((toast) => {
+            if (toast.dataset.dismissInitialized === "true") return;
+            toast.dataset.dismissInitialized = "true";
+            const timeout = Number(toast.dataset.timeout || 4000);
+            setTimeout(() => {
+              toast.classList.add("opacity-0", "transition-opacity", "duration-300");
+              setTimeout(() => toast.remove(), 300);
+            }, timeout);
+          });
+        };
+
+        document.addEventListener("DOMContentLoaded", dismissToasts);
+        document.addEventListener("turbo:load", dismissToasts);
+      })();
+    </script>
+  </body>
+</html>

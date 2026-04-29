@@ -1,0 +1,162 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "smoke_support"
+
+report = SmokeReport.new("Athena agent tools")
+session = SmokeSupport.session
+headers = SmokeSupport.tool_headers
+customer = SmokeSupport.smoke_customer
+
+conversation = customer.conversations.create!(
+  channel: "voice",
+  status: "open",
+  agent_name: "Smoke Tools"
+)
+conversation.messages.create!(
+  role: "assistant",
+  content: "Hello from the smoke tools script.",
+  sent_at: Time.current
+)
+
+report.check("status") do
+  session.post "/agent_tools/status", headers: headers
+  body = SmokeSupport.json_body(session)
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  report.assert(body["ok"] == true, "expected ok=true")
+  report.assert(body["command"] == "status", "expected status command")
+end
+
+report.check("command dispatcher") do
+  session.post "/agent_tools/command", params: { command: "status" }, headers: headers
+  body = SmokeSupport.json_body(session)
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  report.assert(body["command"] == "status", "expected dispatcher to return status")
+end
+
+report.check("lookup") do
+  session.post "/agent_tools/lookup", params: { phone_number: customer.phone_number }, headers: headers
+  body = SmokeSupport.json_body(session)
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  report.assert(body.dig("customer", "phone_number") == customer.phone_number, "expected smoke customer")
+end
+
+report.check("update") do
+  session.post "/agent_tools/update",
+    params: { customer_id: customer.id, metadata: { "smoke_checked_at" => Time.current.iso8601 } },
+    headers: headers
+  body = SmokeSupport.json_body(session)
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  report.assert(body["updated"] == true, "expected customer update")
+end
+
+report.check("find_contact") do
+  session.post "/agent_tools/find_contact", params: { query: customer.phone_number }, headers: headers
+  body = SmokeSupport.json_body(session)
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  report.assert(body["found"] == true, "expected contact match")
+end
+
+report.check("summarize_last_call") do
+  session.post "/agent_tools/summarize_last_call", headers: headers
+  body = SmokeSupport.json_body(session)
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  report.assert(body.dig("call", "id").present?, "expected recent call payload")
+end
+
+report.check("athena_calls_latest") do
+  session.post "/agent_tools/athena_calls_latest", params: { limit: 1 }, headers: headers
+  body = SmokeSupport.json_body(session)
+  report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+  report.assert(body["calls"].is_a?(Array), "expected calls array")
+end
+
+original_web_search_new = WebSearchService.method(:new)
+WebSearchService.define_singleton_method(:new) do |*|
+  Struct.new(:call).new(
+    {
+      ok: true,
+      provider: "smoke_search",
+      query: "Athena",
+      results: [ { title: "Athena smoke result", url: "https://example.test" } ]
+    }
+  )
+end
+
+begin
+  report.check("web_search") do
+    session.post "/agent_tools/web_search", params: { query: "Athena" }, headers: headers
+    body = SmokeSupport.json_body(session)
+    report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+    report.assert(body["provider"] == "smoke_search", "expected fake search provider")
+  end
+ensure
+  WebSearchService.define_singleton_method(:new) do |*args, &block|
+    original_web_search_new.call(*args, &block)
+  end
+end
+
+original_openclaw_new = OpenClawAgentService.method(:new)
+OpenClawAgentService.define_singleton_method(:new) do |*|
+  Struct.new(:call).new(
+    {
+      ok: true,
+      provider: "smoke_openclaw",
+      agent: "smoke",
+      session_id: "smoke",
+      reply: "Thanks for the call. This is a smoke-test follow-up."
+    }
+  )
+end
+
+begin
+  report.check("openclaw_chat") do
+    session.post "/agent_tools/openclaw_chat", params: { prompt: "Say hello" }, headers: headers
+    body = SmokeSupport.json_body(session)
+    report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+    report.assert(body["provider"] == "smoke_openclaw", "expected fake OpenClaw provider")
+  end
+
+  report.check("draft_follow_up") do
+    session.post "/agent_tools/draft_follow_up",
+      params: { context: "Follow up after a smoke call.", customer_name: customer.name },
+      headers: headers
+    body = SmokeSupport.json_body(session)
+    report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+    report.assert(body["command"] == "draft_follow_up", "expected draft command")
+    report.assert(body["reply"].present?, "expected draft body")
+  end
+
+  report.check("gmail_send gemma-mail fallback") do
+    session.post "/agent_tools/gmail_send",
+      params: { to: "smoke@example.test", subject: "Smoke", context: "Draft a smoke-test email.", mode: "draft" },
+      headers: headers
+    body = SmokeSupport.json_body(session)
+    report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
+    report.assert(body["command"] == "gmail_send", "expected gmail command")
+    report.assert(body["reply"].present?, "expected gemma-mail reply")
+  end
+ensure
+  OpenClawAgentService.define_singleton_method(:new) do |*args, &block|
+    original_openclaw_new.call(*args, &block)
+  end
+end
+
+if AppSetting.fetch("GOOGLE_CALENDAR_TOOL_URL").to_s.blank?
+  report.check("calendar_availability setup guard") do
+    session.post "/agent_tools/calendar_availability",
+      params: { start_at: "2026-04-26T10:00:00Z" },
+      headers: headers
+    body = SmokeSupport.json_body(session)
+    report.assert(session.response.status == 503, "expected missing connector 503")
+    report.assert(body["error"].to_s.include?("GOOGLE_CALENDAR_TOOL_URL"), "expected setup error")
+  end
+else
+  report.skip("calendar_availability", "GOOGLE_CALENDAR_TOOL_URL is configured; skipping external connector call")
+end
+
+if AppSetting.fetch("GMAIL_TOOL_URL").to_s.present?
+  report.skip("gmail_send", "GMAIL_TOOL_URL is configured; skipping external connector call")
+end
+
+report.finish!(customer_id: customer.id, conversation_id: conversation.id)

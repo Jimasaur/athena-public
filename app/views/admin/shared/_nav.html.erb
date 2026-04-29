@@ -1,0 +1,37 @@
+<header class="sticky top-0 z-50 mb-4 w-full border-b border-[#dfe5dc] bg-[#fffffb]/95 py-4 shadow-sm backdrop-blur">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6">
+    <%= link_to root_url, class: "flex items-center hover:opacity-90" do %>
+      <%= image_tag "athena-logo.svg", class: "h-10 w-auto", alt: "Athena" %>
+    <% end %>
+    <nav class="flex flex-wrap items-center gap-6 text-sm font-medium">
+      <%= link_to admin_root_path, class: "flex items-center gap-2 border-b-2 border-transparent pb-1 text-[#66716d] hover:border-[#0f766e] hover:text-[#182023]" do %>
+        <%= tabler_icon("dashboard", size: 18) %>
+        Dashboard
+      <% end %>
+      <%= link_to admin_conversations_path, class: "flex items-center gap-2 border-b-2 border-transparent pb-1 text-[#66716d] hover:border-[#0f766e] hover:text-[#182023]" do %>
+        <%= tabler_icon("phone-call", size: 18) %>
+        Conversations
+      <% end %>
+      <%= link_to admin_idea_captures_path, class: "flex items-center gap-2 border-b-2 border-transparent pb-1 text-[#66716d] hover:border-[#0f766e] hover:text-[#182023]" do %>
+        <%= tabler_icon("bulb", size: 18) %>
+        Ideas
+      <% end %>
+      <%= link_to admin_demo_scenarios_path, class: "flex items-center gap-2 border-b-2 border-transparent pb-1 text-[#66716d] hover:border-[#0f766e] hover:text-[#182023]" do %>
+        <%= tabler_icon("player-play", size: 18) %>
+        Demos
+      <% end %>
+      <%= link_to admin_customers_path, class: "flex items-center gap-2 border-b-2 border-transparent pb-1 text-[#66716d] hover:border-[#0f766e] hover:text-[#182023]" do %>
+        <%= tabler_icon("users", size: 18) %>
+        Contacts
+      <% end %>
+      <%= link_to admin_agent_settings_path, class: "flex items-center gap-2 border-b-2 border-transparent pb-1 text-[#66716d] hover:border-[#0f766e] hover:text-[#182023]" do %>
+        <%= tabler_icon("robot-face", size: 18) %>
+        Agents
+      <% end %>
+      <%= link_to admin_app_settings_path, class: "flex items-center gap-2 border-b-2 border-transparent pb-1 text-[#66716d] hover:border-[#0f766e] hover:text-[#182023]" do %>
+        <%= tabler_icon("adjustments", size: 18) %>
+        Config
+      <% end %>
+    </nav>
+  </div>
+</header>

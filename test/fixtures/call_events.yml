@@ -1,0 +1,23 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  conversation: one
+  twilio_call_sid: CA1234567890abcdef1234567890abcd
+  status: completed
+  direction: inbound
+  from_number: "+14155550100"
+  to_number: "+14155559999"
+  recording_url: "https://api.twilio.com/2010-04-01/Accounts/AC123/Recordings/RE123"
+  transcription: "Hi, can you check the ETA for order 8742?"
+  data: { CallStatus: completed }
+
+two:
+  conversation: two
+  twilio_call_sid: CAabcdef1234567890abcdef12345678
+  status: completed
+  direction: inbound
+  from_number: "+14155550133"
+  to_number: "+14155559999"
+  recording_url: "https://api.twilio.com/2010-04-01/Accounts/AC123/Recordings/RE124"
+  transcription: "What are your store hours this week?"
+  data: { CallStatus: completed }

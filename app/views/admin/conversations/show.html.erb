@@ -1,0 +1,519 @@
+<%= turbo_stream_from @conversation %>
+
+<%= render "admin/shared/page_header",
+  title: "Conversation with #{@conversation.customer.name.presence || "Unknown caller"}",
+  subtitle: "#{format_phone(@conversation.customer.phone_number)} · #{@conversation.channel.capitalize}",
+  back: { label: "Back to conversations", path: admin_conversations_path },
+  right_class: "flex flex-wrap items-center gap-3 text-xs text-[#66716d]" do %>
+  <% status_class = @conversation.status == "in_progress" ? "border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]" : "border-[#dfe5dc] bg-[#fffffb] text-[#66716d]" %>
+  <span class="rounded-sm border px-3 py-1 text-xs font-semibold uppercase tracking-wide <%= status_class %>">
+    <%= @conversation.status %>
+  </span>
+  <% if @conversation.status == "in_progress" %>
+    <span class="inline-flex items-center gap-1 text-[#0f766e]">
+      <span class="h-1.5 w-1.5 rounded-full bg-[#0f766e]"></span>
+      Live
+    </span>
+  <% end %>
+  <span><%= l(@conversation.created_at, format: :long) %></span>
+<% end %>
+
+<% state = @call_state&.state || {} %>
+<% intent = state["intent"] || {} %>
+<% risk = state["risk"] || {} %>
+
+<section class="mb-6 rounded-sm border p-5 shadow-sm <%= @review_state[:panel_classes] %>">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0 flex-1">
+      <p class="brand-kicker">Operator brief</p>
+      <h2 class="mt-2 text-xl font-semibold text-[#182023]"><%= @review_state[:label] %></h2>
+      <p class="mt-2 max-w-3xl text-sm leading-6 text-[#4f5d58]"><%= @review_state[:next_action] %></p>
+    </div>
+    <span class="inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-xs font-semibold <%= @review_state[:badge_classes] %>">
+      <i class="ti <%= @review_state[:icon] %> text-base" aria-hidden="true"></i>
+      <%= @review_state[:detail] %>
+    </span>
+  </div>
+
+  <div class="mt-5 grid gap-3 md:grid-cols-4">
+    <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+      <p class="text-xs font-semibold uppercase text-[#8a9690]">Intent</p>
+      <p class="mt-2 text-sm font-semibold text-[#182023]"><%= intent["label"].presence || "unknown" %></p>
+      <% if intent["confidence"].present? %>
+        <p class="mt-1 text-xs text-[#66716d]"><%= number_to_percentage(intent["confidence"].to_f * 100, precision: 0) %> confidence</p>
+      <% end %>
+    </div>
+    <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+      <p class="text-xs font-semibold uppercase text-[#8a9690]">Risk</p>
+      <p class="mt-2 text-sm font-semibold text-[#182023]"><%= risk["level"].presence || "low" %></p>
+      <p class="mt-1 text-xs text-[#66716d]"><%= Array(risk["reasons"]).presence&.join(", ") || "No elevated risk noted" %></p>
+    </div>
+    <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+      <p class="text-xs font-semibold uppercase text-[#8a9690]">Queued actions</p>
+      <p class="mt-2 text-sm font-semibold text-[#182023]"><%= @action_drafts.size %></p>
+      <p class="mt-1 text-xs text-[#66716d]"><%= @review_state[:pending_count] %> pending · <%= @review_state[:ready_count] %> executable</p>
+    </div>
+    <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+      <p class="text-xs font-semibold uppercase text-[#8a9690]">Guardrail</p>
+      <p class="mt-2 text-sm font-semibold text-[#182023]">Draft-only actions</p>
+      <p class="mt-1 text-xs text-[#66716d]">External sends stay approval-gated.</p>
+    </div>
+  </div>
+</section>
+
+<div class="grid gap-6 lg:grid-cols-3">
+  <section class="lg:col-span-2 space-y-6">
+    <% if @conversation.status == "in_progress" %>
+      <section class="brand-panel rounded-sm p-6" data-controller="live-audio" data-live-audio-conversation-id-value="<%= @conversation.id %>">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-[#182023]">Live stream</h2>
+            <p class="text-xs text-[#66716d]">Streaming audio during the call</p>
+          </div>
+        </div>
+        <div class="mt-4 flex items-center gap-4">
+          <button type="button" class="audio-toggle inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[#dfe5dc] bg-[#fffffb] text-[#0f766e] hover:bg-[#eef7f4]" data-live-audio-target="toggle" data-action="click->live-audio#toggle" aria-label="Toggle live audio">
+            <svg class="audio-icon h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-live-audio-target="icon">
+              <polygon points="6 4 20 12 6 20 6 4" />
+            </svg>
+          </button>
+          <div class="flex-1">
+            <canvas class="audio-waveform h-10 w-full" data-live-audio-target="waveform"></canvas>
+            <input type="range" min="0" max="100" value="0" class="audio-progress w-full accent-[#0f766e]" data-live-audio-target="progress" disabled>
+            <div class="mt-1 flex items-center justify-between text-xs text-[#66716d]">
+              <span data-live-audio-target="current">Stopped</span>
+              <span data-live-audio-target="duration">Live</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    <% elsif @conversation.recording.attached? %>
+      <section class="brand-panel rounded-sm p-6" data-controller="audio-player" data-audio-player>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-[#182023]">Recording</h2>
+            <p class="text-xs text-[#66716d]">Post-call audio</p>
+          </div>
+        </div>
+        <audio class="hidden" src="<%= url_for(@conversation.recording) %>" preload="metadata"></audio>
+        <div class="mt-4 flex items-center gap-4">
+          <button type="button" class="audio-toggle inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[#dfe5dc] bg-[#fffffb] text-[#0f766e] hover:bg-[#eef7f4]">
+            <svg class="audio-icon h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="6 4 20 12 6 20 6 4" />
+            </svg>
+          </button>
+          <div class="flex-1">
+            <canvas class="audio-waveform h-10 w-full"></canvas>
+            <input type="range" min="0" max="100" value="0" class="audio-progress w-full accent-[#0f766e]">
+            <div class="mt-1 flex items-center justify-between text-xs text-[#66716d]">
+              <span class="audio-current">0:00</span>
+              <span class="audio-duration">0:00</span>
+            </div>
+            <p class="audio-error mt-2 hidden text-xs font-medium text-[#9d332c]"></p>
+          </div>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#66716d]">
+          <%= link_to url_for(@conversation.recording), class: "inline-flex items-center gap-1 font-semibold text-[#0f766e] hover:text-[#0d4f4a]" do %>
+            <%= tabler_icon("external-link", size: 14) %>
+            Open recording
+          <% end %>
+          <span><%= @conversation.recording.blob.content_type %> · <%= number_to_human_size(@conversation.recording.blob.byte_size) %></span>
+        </div>
+      </section>
+    <% elsif @conversation.status != "in_progress" %>
+      <section class="brand-panel rounded-sm p-6">
+        <div class="flex items-start gap-3">
+          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-[#e2d96c] bg-[#fbfadf] text-[#6e6b17]">
+            <%= tabler_icon("record-mail", size: 18) %>
+          </div>
+          <div>
+            <h2 class="text-sm font-semibold text-[#182023]">Recording unavailable</h2>
+            <p class="mt-1 text-xs leading-5 text-[#66716d]">No post-call audio is attached to this conversation. Future Twilio live calls are saved from the media stream when the call ends.</p>
+          </div>
+        </div>
+      </section>
+    <% end %>
+
+    <section class="brand-panel rounded-sm">
+      <div class="border-b border-[#dfe5dc] px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-[#182023]">Transcript</h2>
+            <p class="text-xs text-[#66716d]">Live during calls, finalized after completion</p>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-4 p-6" data-transcript-root data-agent-name="<%= @conversation.agent_name %>">
+        <%= render partial: "transcript", locals: { conversation: @conversation, transcript_event: @transcript_event, messages: @messages } %>
+      </div>
+    </section>
+
+    <section class="brand-panel rounded-sm">
+      <div class="border-b border-[#dfe5dc] px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-[#182023]">Timeline</h2>
+            <p class="text-xs text-[#66716d]">Call activity, sidecar decisions, review, and execution</p>
+          </div>
+          <span class="rounded-sm border border-[#dfe5dc] px-2 py-1 text-xs font-medium text-[#66716d]"><%= @timeline_entries.size %></span>
+        </div>
+      </div>
+      <% if @timeline_entries.any? %>
+        <div class="divide-y divide-[#dfe5dc]">
+          <% @timeline_entries.each do |entry| %>
+            <% tone_classes = case entry.tone
+              when "emerald"
+                "border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]"
+              when "rose"
+                "border-[#e8beb9] bg-[#fbecea] text-[#9d332c]"
+              when "amber"
+                "border-[#e2d96c] bg-[#fbfadf] text-[#6e6b17]"
+              when "sky"
+                "border-[#d8d2f1] bg-[#f0edf9] text-[#6554c0]"
+              else
+                "border-[#dfe5dc] bg-[#fffffb] text-[#66716d]"
+              end %>
+            <div class="grid gap-3 px-6 py-4 text-sm sm:grid-cols-[7.5rem_1fr]">
+              <div class="text-xs text-[#66716d]">
+                <%= entry.occurred_at.present? ? l(entry.occurred_at, format: :short) : "—" %>
+              </div>
+              <div class="flex gap-3">
+                <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border <%= tone_classes %>">
+                  <i class="ti <%= entry.icon %> text-base" aria-hidden="true"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="font-semibold text-[#182023]"><%= entry.title %></p>
+                    <% if entry.badge.present? %>
+                      <span class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-2 py-0.5 text-[11px] font-medium text-[#66716d]"><%= entry.badge.to_s.humanize %></span>
+                    <% end %>
+                  </div>
+                  <p class="mt-1 text-xs text-[#66716d]"><%= entry.source %></p>
+                  <% if entry.detail.present? %>
+                    <p class="mt-1 text-sm leading-5 text-[#4f5d58]"><%= entry.detail %></p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="px-6 py-5 text-sm text-[#66716d]">No timeline activity yet.</p>
+      <% end %>
+    </section>
+  </section>
+
+  <aside class="space-y-6">
+    <section class="brand-panel rounded-sm p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-[#182023]">Metadata</h2>
+        <span class="break-all text-xs text-[#66716d]"><%= @conversation.twilio_call_sid.presence || "—" %></span>
+      </div>
+      <dl class="mt-3 space-y-2 text-xs text-[#66716d]">
+        <div class="flex items-center justify-between">
+          <dt>Date</dt>
+          <dd class="font-medium text-[#33413d]"><%= l(@conversation.created_at, format: :long) %></dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt>Agent</dt>
+          <% fallback_agent = @transcript_event&.data&.dig("data", "agent_name") %>
+          <dd class="font-medium text-[#33413d]"><%= @conversation.agent_name.presence || fallback_agent.presence || "Unknown" %></dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt>Channel</dt>
+          <dd class="font-medium text-[#33413d]"><%= @conversation.channel.capitalize %></dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt>Patient</dt>
+          <dd class="font-medium text-[#33413d]"><%= @conversation.customer.name.presence || "Unknown caller" %></dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt>Phone</dt>
+          <dd class="font-medium text-[#33413d]"><%= @conversation.customer.phone_number %></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="brand-panel rounded-sm p-4">
+      <h2 class="text-sm font-semibold text-[#182023]">Analysis</h2>
+      <% analysis = @transcript_event&.data&.dig("data", "analysis") || {} %>
+      <% data_collection = analysis["data_collection_results_list"] || [] %>
+      <dl class="mt-3 space-y-2 text-xs text-[#66716d]">
+        <div class="flex items-center justify-between">
+          <dt>Outcome</dt>
+          <dd class="font-medium text-[#33413d]"><%= analysis["call_successful"] || "—" %></dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt>Summary title</dt>
+          <dd class="font-medium text-[#33413d]"><%= analysis["call_summary_title"] || "—" %></dd>
+        </div>
+      </dl>
+      <div class="mt-3 space-y-2 text-xs text-[#66716d]">
+        <p class="font-medium text-[#33413d]">Summary</p>
+        <p class="whitespace-pre-line text-[#4f5d58]"><%= analysis["transcript_summary"].presence || "—" %></p>
+      </div>
+      <% if data_collection.any? %>
+        <div class="mt-4 space-y-2 text-xs text-[#66716d]">
+          <p class="font-medium text-[#33413d]">Data collected</p>
+          <div class="space-y-2">
+            <% data_collection.each do |item| %>
+              <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] uppercase text-[#8a9690]"><%= item["data_collection_id"] %></span>
+                  <span class="font-medium text-[#33413d]"><%= item["value"].presence || "—" %></span>
+                </div>
+                <% if item["rationale"].present? %>
+                  <p class="mt-1 text-[11px] text-[#66716d]"><%= item["rationale"] %></p>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="brand-panel rounded-sm p-4">
+      <h2 class="text-sm font-semibold text-[#182023]">Call state</h2>
+      <% if @call_state.present? %>
+        <% state = @call_state.state || {} %>
+        <% intent = state["intent"] || {} %>
+        <% risk = state["risk"] || {} %>
+        <dl class="mt-3 space-y-2 text-xs text-[#66716d]">
+          <div class="flex items-center justify-between">
+            <dt>Provider</dt>
+            <dd class="font-medium text-[#33413d]"><%= @call_state.provider.presence || "—" %></dd>
+          </div>
+          <div class="flex items-center justify-between">
+            <dt>Status</dt>
+            <dd class="font-medium text-[#33413d]"><%= @call_state.status %></dd>
+          </div>
+          <div class="flex items-center justify-between">
+            <dt>Review</dt>
+            <dd class="font-medium text-[#33413d]"><%= @call_state.review_status %></dd>
+          </div>
+          <div class="flex items-center justify-between">
+            <dt>Intent</dt>
+            <dd class="font-medium text-[#33413d]"><%= intent["label"].presence || "unknown" %></dd>
+          </div>
+          <div class="flex items-center justify-between">
+            <dt>Risk</dt>
+            <dd class="font-medium text-[#33413d]"><%= risk["level"].presence || "low" %></dd>
+          </div>
+        </dl>
+      <% else %>
+        <p class="mt-3 text-xs text-[#66716d]">No call state has been created yet.</p>
+      <% end %>
+    </section>
+
+    <section class="brand-panel rounded-sm p-4">
+      <h2 class="text-sm font-semibold text-[#182023]">Drafts</h2>
+      <% if @action_drafts.any? %>
+        <div class="mt-3 space-y-3">
+          <% @action_drafts.each do |draft| %>
+            <% status_classes = case draft.status
+              when ActionDraft::APPROVED_STATUS
+                "border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]"
+              when ActionDraft::REJECTED_STATUS
+                "border-[#e8beb9] bg-[#fbecea] text-[#9d332c]"
+              when ActionDraft::EXECUTED_STATUS
+                "border-[#d8d2f1] bg-[#f0edf9] text-[#6554c0]"
+              when ActionDraft::EXECUTION_FAILED_STATUS
+                "border-[#e8beb9] bg-[#fbecea] text-[#9d332c]"
+              else
+                "border-[#e2d96c] bg-[#fbfadf] text-[#6e6b17]"
+              end %>
+            <div class="rounded-sm border border-[#e8beb9] bg-[#fff8f6] px-3 py-3 text-xs text-[#33413d]">
+              <div class="flex items-center justify-between gap-3">
+                <span class="font-semibold text-[#182023]"><%= draft.kind.to_s.humanize %></span>
+                <span class="rounded-sm border px-2 py-0.5 font-medium <%= status_classes %>"><%= draft.status.humanize %></span>
+              </div>
+              <% if draft.recipient.present? %>
+                <p class="mt-1 text-[11px] text-[#66716d]">
+                  <%= [draft.recipient["name"], draft.recipient["phone"], draft.recipient["email"]].compact_blank.join(" · ") %>
+                </p>
+              <% end %>
+              <% if draft.content&.dig("subject").present? %>
+                <p class="mt-2 text-[11px] font-semibold text-[#182023]"><%= draft.content["subject"] %></p>
+              <% end %>
+              <% body = draft.content&.dig("body") %>
+              <p class="mt-2 whitespace-pre-line leading-5"><%= body.presence || "No draft body available." %></p>
+              <% if draft.pending_approval? %>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <%= button_to approve_admin_action_draft_path(draft), method: :post, form: { class: "inline-flex" }, class: "inline-flex items-center gap-1.5 rounded-sm border border-[#bfddd6] bg-[#fffffb] px-2.5 py-1.5 text-[11px] font-semibold text-[#0f766e] shadow-sm hover:bg-[#e8f3ef]" do %>
+                    <i class="ti ti-check text-sm" aria-hidden="true"></i>
+                    <span>Approve</span>
+                  <% end %>
+                  <%= button_to reject_admin_action_draft_path(draft), method: :post, form: { class: "inline-flex", data: { turbo_confirm: "Reject this draft?" } }, class: "inline-flex items-center gap-1.5 rounded-sm border border-[#e8beb9] bg-[#fffffb] px-2.5 py-1.5 text-[11px] font-semibold text-[#9d332c] shadow-sm hover:bg-[#fbecea]" do %>
+                    <i class="ti ti-x text-sm" aria-hidden="true"></i>
+                    <span>Reject</span>
+                  <% end %>
+                </div>
+              <% elsif draft.executable? && draft.kind == "follow_up_message" %>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <%= button_to execute_admin_action_draft_path(draft), method: :post, form: { class: "inline-flex", data: { turbo_confirm: "Send this approved draft by SMS?" } }, class: "inline-flex items-center gap-1.5 rounded-sm border border-[#bfddd6] bg-[#fffffb] px-2.5 py-1.5 text-[11px] font-semibold text-[#0f766e] shadow-sm hover:bg-[#e8f3ef]" do %>
+                    <i class="ti ti-send text-sm" aria-hidden="true"></i>
+                    <span>Send SMS</span>
+                  <% end %>
+                </div>
+              <% elsif draft.executable? && draft.kind == "email" %>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <%= button_to execute_admin_action_draft_path(draft), method: :post, form: { class: "inline-flex", data: { turbo_confirm: "Send this approved draft by email through Gemma Mail?" } }, class: "inline-flex items-center gap-1.5 rounded-sm border border-[#bfddd6] bg-[#fffffb] px-2.5 py-1.5 text-[11px] font-semibold text-[#0f766e] shadow-sm hover:bg-[#e8f3ef]" do %>
+                    <i class="ti ti-mail text-sm" aria-hidden="true"></i>
+                    <span>Send Email</span>
+                  <% end %>
+                </div>
+              <% elsif draft.executable? %>
+                <p class="mt-2 text-[11px] text-[#66716d]">Approved for manual follow-up.</p>
+              <% elsif draft.approved_at.present? %>
+                <p class="mt-2 text-[11px] text-[#66716d]">
+                  Reviewed by <%= draft.approved_by.presence || "admin" %> · <%= l(draft.approved_at, format: :short) %>
+                </p>
+              <% end %>
+              <% if draft.external_side_effect&.dig("error").present? %>
+                <p class="mt-2 text-[11px] text-[#9d332c]"><%= draft.external_side_effect["error"] %></p>
+              <% elsif draft.external_side_effect&.dig("external_id").present? %>
+                <p class="mt-2 break-all font-mono text-[11px] text-[#66716d]"><%= draft.external_side_effect["external_id"] %></p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="mt-3 text-xs text-[#66716d]">No approval-gated drafts yet.</p>
+      <% end %>
+    </section>
+
+    <section class="brand-panel rounded-sm">
+      <div class="border-b border-[#dfe5dc] px-4 py-3">
+        <h2 class="text-sm font-semibold text-[#182023]">Sidecar events</h2>
+      </div>
+      <% if @sidecar_events.any? %>
+        <div class="divide-y divide-[#dfe5dc]">
+          <% @sidecar_events.each do |event| %>
+            <div class="px-4 py-3 text-xs text-[#66716d]">
+              <div class="flex items-center justify-between gap-3">
+                <p class="font-semibold text-[#33413d]"><%= event.kind %></p>
+                <% if event.requires_review? %>
+                  <span class="rounded-sm border border-[#e8beb9] bg-[#fbecea] px-2 py-0.5 text-[11px] font-medium text-[#9d332c]">Review</span>
+                <% end %>
+              </div>
+              <p><%= event.source %> · <%= l(event.occurred_at, format: :short) %></p>
+              <% if event.payload&.dig("summary").present? %>
+                <p class="mt-1 text-[#66716d]"><%= event.payload["summary"] %></p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="p-4 text-xs text-[#66716d]">No sidecar events yet.</p>
+      <% end %>
+    </section>
+
+    <section class="brand-panel rounded-sm">
+      <div class="border-b border-[#dfe5dc] px-4 py-3">
+        <h2 class="text-sm font-semibold text-[#182023]">Call events</h2>
+      </div>
+      <div id="<%= dom_id(@conversation, :call_events) %>" class="divide-y divide-[#dfe5dc]">
+        <%= render partial: "call_event", collection: @call_events, as: :call_event %>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+  (() => {
+    if (window.athenaConversationScriptsInitialized) return;
+    window.athenaConversationScriptsInitialized = true;
+
+    const initCallEventRefresh = () => {
+      const container = document.getElementById("<%= dom_id(@conversation, :call_events) %>");
+      if (!container) return;
+      if (container.dataset.refreshInitialized === "true") return;
+      container.dataset.refreshInitialized = "true";
+
+      const shouldReload = (node) => {
+        if (!node?.dataset?.status) return false;
+        return ["completed", "post_call_transcription", "post_call_audio"].includes(node.dataset.status);
+      };
+
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE && shouldReload(node)) {
+              window.location.reload();
+            }
+          });
+        });
+      });
+
+      observer.observe(container, { childList: true });
+    };
+
+    const renderTranscript = () => {
+      document.querySelectorAll("[data-transcript-root]").forEach((root) => {
+        const jsonNode = root.querySelector("[data-transcript-json]");
+        const list = root.querySelector("[data-transcript-list]");
+        if (!jsonNode || !list) return;
+
+        let items = [];
+        try {
+          items = JSON.parse(jsonNode.textContent);
+        } catch (error) {
+          return;
+        }
+
+        const escapeHtml = (value) =>
+          value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+
+        const formatElapsed = (seconds) => {
+          if (seconds === null || seconds === undefined) return "—";
+          const total = Math.max(0, Math.floor(Number(seconds)));
+          const minutes = Math.floor(total / 60);
+          const remainder = total % 60;
+          return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+        };
+
+        const agentName = root.dataset.agentName;
+        const normalizeRole = (item) => {
+          const raw = (item.role || item.speaker || item.speaker_type || item.sender || item.source || item.participant || item.participant_type || item.track || "").toString().toLowerCase().trim().replaceAll("-", "_").replaceAll(" ", "_");
+          if (["agent", "ai", "assistant", "bot", "llm", "outbound", "outbound_track", "response", "agent_response", "assistant_response", "voice_agent", "virtual_agent"].includes(raw)) return "assistant";
+          return "user";
+        };
+        list.innerHTML = items
+          .map((item) => {
+            const role = normalizeRole(item);
+            const isUser = role === "user";
+            const label = role === "assistant" ? (agentName || "Agent") : "User";
+            const message = escapeHtml(item.message || item.text || "");
+            const time = formatElapsed(item.time_in_call_secs);
+
+            return `
+              <div class="flex ${isUser ? "justify-end" : "justify-start"}">
+                <div class="max-w-[75%] space-y-1">
+                  <div class="flex items-center gap-2 text-xs text-[#66716d]">
+                    <span class="uppercase tracking-wide">${label}</span>
+                    <span>·</span>
+                    <span>${time}</span>
+                  </div>
+                  <div class="rounded-sm border px-4 py-3 text-sm text-[#33413d] ${isUser ? "border-[#bfddd6] bg-[#eef7f4]" : "border-[#dfe5dc] bg-[#fffffb]"}">
+                    ${message}
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      });
+    };
+
+    document.addEventListener("DOMContentLoaded", renderTranscript);
+    document.addEventListener("turbo:load", renderTranscript);
+    document.addEventListener("turbo:after-stream-render", renderTranscript);
+    document.addEventListener("DOMContentLoaded", initCallEventRefresh);
+    document.addEventListener("turbo:load", initCallEventRefresh);
+  })();
+</script>

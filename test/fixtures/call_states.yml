@@ -1,0 +1,16 @@
+one:
+  conversation: one
+  call_id: CA1234567890abcdef1234567890abcd
+  provider: openai_realtime
+  space: healthcare
+  use_case_slug: rev-cycle-ideation-session
+  status: completed
+  state:
+    schema: call_state.v1
+    intent:
+      label: summarize_last_call
+      confidence: 0.8
+    risk:
+      level: low
+      reasons: []
+  review_status: pending

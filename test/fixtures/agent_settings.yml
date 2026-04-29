@@ -1,0 +1,31 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  agent_id: agent-001
+  name: Athena Voice
+  system_prompt: "You are Athena, a helpful voice agent."
+  first_message: "Hello {{customer_greeting_name}} from Athena."
+  tools:
+    - name: customer_lookup
+      description: Find customer by phone.
+      parameters:
+        phone_number: string
+  voice_id: marin
+  tool_url: https://example.com/agent_tools/lookup
+  twilio_number: "+14155551234"
+  data:
+    source: fixture
+    conversation_config:
+      agent:
+        first_message: "Hello from Athena."
+
+two:
+  agent_id: agent-002
+  name: Athena Backup
+  system_prompt: "Fallback agent."
+  first_message: "Hello from the backup agent."
+  tools: []
+  voice_id: marin
+  tool_url: https://example.com/agent_tools/update
+  data:
+    source: fixture

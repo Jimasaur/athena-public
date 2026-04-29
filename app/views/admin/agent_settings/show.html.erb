@@ -1,0 +1,57 @@
+<%= render "admin/shared/page_header",
+  title: @agent_setting.name.presence || "Realtime agent profile",
+  subtitle: @agent_setting.agent_id,
+  back: { label: "Back to agents", path: admin_agent_settings_path } do %>
+  <%= link_to edit_admin_agent_setting_path(@agent_setting), class: "group inline-flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-100" do %>
+    <%= tabler_icon("pencil", size: 16, class_name: "text-slate-500 group-hover:text-slate-700") %>
+    Edit
+  <% end %>
+<% end %>
+
+<section class="grid gap-6 lg:grid-cols-3">
+  <div class="space-y-6 lg:col-span-2">
+    <div class="rounded-sm border border-slate-100 bg-white p-6 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold">Realtime Prompt</h2>
+        <span class="rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold uppercase text-emerald-700">OpenAI</span>
+      </div>
+      <div class="prose prose-sm mt-3 max-h-96 max-w-none overflow-y-auto text-sm text-slate-700">
+        <%= simple_format(@agent_setting.system_prompt.presence || "No system prompt configured.") %>
+      </div>
+    </div>
+
+    <div class="rounded-sm border border-slate-100 bg-white p-6 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold">Opening Greeting</h2>
+        <%= link_to "Edit", edit_admin_agent_setting_path(@agent_setting), class: "text-xs font-medium text-slate-600 hover:text-slate-900" %>
+      </div>
+      <p class="mt-3 text-sm text-slate-700"><%= @agent_setting.first_message.presence || "No opening greeting configured." %></p>
+    </div>
+
+    <section class="rounded-sm border border-slate-100 bg-white p-6 shadow-sm">
+      <h2 class="text-sm font-semibold">Athena Tools</h2>
+      <p class="mt-1 text-xs text-slate-500">OpenAI Realtime receives Athena's built-in tool contract during each session. This JSON is retained for local profile notes and future tool expansion.</p>
+      <pre class="mt-3 overflow-auto rounded-sm border border-slate-100 bg-slate-50 p-4 text-xs text-slate-700"><%= JSON.pretty_generate(@agent_setting.tools || []) %></pre>
+    </section>
+  </div>
+
+  <div class="space-y-4">
+    <div class="rounded-sm border border-slate-100 bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase text-slate-500">Provider</p>
+      <p class="mt-2 text-sm font-semibold text-slate-900">OpenAI Realtime</p>
+      <p class="mt-1 text-xs text-slate-500"><%= AppSetting.fetch("OPENAI_REALTIME_MODEL", "gpt-realtime-1.5") %></p>
+    </div>
+    <div class="rounded-sm border border-slate-100 bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase text-slate-500">Realtime Voice</p>
+      <p class="mt-2 text-sm text-slate-700 break-all"><%= @agent_setting.voice_id.presence || AppSetting.fetch("OPENAI_REALTIME_VOICE", "marin") %></p>
+    </div>
+    <div class="rounded-sm border border-slate-100 bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase text-slate-500">Twilio Number</p>
+      <p class="mt-2 break-all text-sm text-slate-700"><%= @agent_setting.twilio_number.presence || "Not set" %></p>
+    </div>
+    <div class="rounded-sm border border-slate-100 bg-white p-5 shadow-sm">
+      <p class="text-xs uppercase text-slate-500">Tool URL</p>
+      <p class="mt-2 break-all text-sm text-slate-700"><%= @agent_setting.tool_url.presence || agent_tools_command_path %></p>
+    </div>
+  </div>
+</section>

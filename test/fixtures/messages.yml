@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  conversation: one
+  role: user
+  content: "Hi, can you check the ETA for order 8742?"
+  sent_at: 2026-02-24 10:00:00
+
+two:
+  conversation: two
+  role: assistant
+  content: "We are open 9 AM to 7 PM Monday through Saturday."
+  sent_at: 2026-02-24 10:05:00

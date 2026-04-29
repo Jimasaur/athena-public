@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "open3"
+
+scripts = [
+  "script/smoke_agent_tools",
+  "script/smoke_twilio_voice",
+  "script/smoke_sidecar_review_execute"
+]
+
+results = scripts.map do |script|
+  output, status = Open3.capture2e({ "LIVE_SMS" => "0" }, script)
+  puts output
+  { script: script, ok: status.success? }
+end
+
+ok = results.all? { |result| result[:ok] }
+puts JSON.pretty_generate(ok: ok, scripts: results)
+exit(ok ? 0 : 1)

@@ -1,0 +1,184 @@
+<%= render "admin/shared/page_header",
+  title: "Athena Control",
+  subtitle: "Demo cockpit for calls, sidecars, drafts, and readiness",
+  right_class: "flex flex-wrap items-center gap-2 text-xs text-[#66716d]" do %>
+  <%= link_to use_cases_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
+    <%= tabler_icon("layout-grid", size: 16) %>
+    Use cases
+  <% end %>
+  <%= link_to admin_demo_scenarios_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
+    <%= tabler_icon("player-play", size: 16) %>
+    Demos
+  <% end %>
+  <%= link_to admin_conversations_path, class: "brand-primary-action inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-sm font-semibold shadow-sm" do %>
+    <%= tabler_icon("phone-call", size: 16) %>
+    Conversations
+  <% end %>
+  <%= link_to admin_idea_captures_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
+    <%= tabler_icon("bulb", size: 16) %>
+    Ideas
+  <% end %>
+<% end %>
+
+<section class="grid gap-4 md:grid-cols-4">
+  <%= link_to admin_conversations_path, class: "brand-panel group rounded-sm p-4 transition hover:border-[#0f766e] hover:bg-[#eef7f4]" do %>
+    <p class="text-xs font-semibold uppercase text-[#8a9690]">Conversations</p>
+    <p class="mt-2 text-3xl font-semibold text-[#182023]"><%= Conversation.count %></p>
+    <p class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#0f766e]">Open queue <i class="ti ti-arrow-right transition group-hover:translate-x-0.5"></i></p>
+  <% end %>
+  <%= link_to admin_idea_captures_path, class: "brand-panel group rounded-sm p-4 transition hover:border-[#6554c0] hover:bg-[#f0edf9]" do %>
+    <p class="text-xs font-semibold uppercase text-[#8a9690]">Ideas captured</p>
+    <p class="mt-2 text-3xl font-semibold text-[#6554c0]"><%= IdeaCapture.count %></p>
+    <p class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#6554c0]">Open library <i class="ti ti-arrow-right transition group-hover:translate-x-0.5"></i></p>
+  <% end %>
+  <%= link_to admin_conversations_path(review: "needs_review"), class: "brand-panel group rounded-sm p-4 transition hover:border-[#d95f54] hover:bg-[#fff8f6]" do %>
+    <p class="text-xs font-semibold uppercase text-[#8a9690]">Pending drafts</p>
+    <p class="mt-2 text-3xl font-semibold text-[#d95f54]"><%= ActionDraft.where(status: ActionDraft::PENDING_APPROVAL_STATUS).count %></p>
+    <p class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#9d332c]">Review now <i class="ti ti-arrow-right transition group-hover:translate-x-0.5"></i></p>
+  <% end %>
+  <%= link_to admin_conversations_path(review: "executed"), class: "brand-panel group rounded-sm p-4 transition hover:border-[#0f766e] hover:bg-[#eef7f4]" do %>
+    <p class="text-xs font-semibold uppercase text-[#8a9690]">Executed actions</p>
+    <p class="mt-2 text-3xl font-semibold text-[#0f766e]"><%= ActionDraft.where(status: ActionDraft::EXECUTED_STATUS).count %></p>
+    <p class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#0f766e]">View audit <i class="ti ti-arrow-right transition group-hover:translate-x-0.5"></i></p>
+  <% end %>
+</section>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+  <section class="brand-panel rounded-sm">
+    <div class="border-b border-[#dfe5dc] px-6 py-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-[#182023]">Guided Demo</h2>
+          <p class="text-xs text-[#66716d]">A stable walkthrough of the Athena chain</p>
+        </div>
+        <%= link_to admin_demo_scenarios_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#d95f54]/30 bg-[#d95f54]/10 px-3 py-2 text-sm font-semibold text-[#9d332c] hover:bg-[#fbecea]" do %>
+          <%= tabler_icon("player-play", size: 16) %>
+          Open launchpad
+        <% end %>
+      </div>
+    </div>
+    <div class="grid gap-4 p-6 md:grid-cols-3">
+      <% [
+        ["Call captured", "Transcript and caller context land in Athena."],
+        ["Idea captured", "Problem, solution, impact, and next step become a card."],
+        ["Review ready", "Discord report and admin timeline are ready for retreat prep."]
+      ].each do |title, detail| %>
+        <div class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4">
+          <p class="text-sm font-semibold text-[#182023]"><%= title %></p>
+          <p class="mt-1 text-sm leading-5 text-[#66716d]"><%= detail %></p>
+        </div>
+      <% end %>
+    </div>
+    <div class="border-t border-[#dfe5dc] px-6 py-4 text-sm text-[#66716d]">
+      Launch four scenario calls from the demo page, or run <code class="rounded-sm border border-[#bfddd6] bg-[#eef7f4] px-1.5 py-0.5 font-mono text-xs text-[#0d4f4a]">script/seed_demo_scenarios</code>.
+    </div>
+  </section>
+
+  <section class="brand-panel rounded-sm">
+    <div class="border-b border-[#dfe5dc] px-6 py-4">
+      <h2 class="text-lg font-semibold text-[#182023]">Readiness</h2>
+      <p class="text-xs text-[#66716d]">Operational switches for today's demo</p>
+    </div>
+    <div class="divide-y divide-[#dfe5dc]">
+      <% @readiness.each do |item| %>
+        <div class="flex items-center justify-between gap-3 px-6 py-3">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-[#182023]"><%= item[:label] %></p>
+            <% if item[:detail].present? %>
+              <p class="truncate font-mono text-xs text-[#66716d]"><%= item[:detail] %></p>
+            <% end %>
+          </div>
+          <% if item[:ready] %>
+            <span class="rounded-sm border border-[#bfddd6] bg-[#e8f3ef] px-2 py-1 text-xs font-semibold text-[#0f766e]">Ready</span>
+          <% else %>
+            <span class="rounded-sm border border-[#e2d96c] bg-[#fbfadf] px-2 py-1 text-xs font-semibold text-[#6e6b17]">Pending</span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-3">
+  <section class="brand-panel rounded-sm">
+    <div class="border-b border-[#dfe5dc] px-6 py-4">
+      <h2 class="text-lg font-semibold text-[#182023]">Latest Calls</h2>
+    </div>
+    <div class="divide-y divide-[#dfe5dc]">
+      <% @latest_conversations.each do |conversation| %>
+        <%= link_to admin_conversation_path(conversation), class: "block px-6 py-4 hover:bg-[#eef7f4]" do %>
+          <p class="text-sm font-semibold text-[#182023]"><%= conversation.customer.name.presence || "Unknown caller" %></p>
+          <p class="mt-1 text-xs text-[#66716d]"><%= conversation.agent_name.presence || conversation.channel.capitalize %> · <%= conversation.status %></p>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="brand-panel rounded-sm">
+    <div class="border-b border-[#dfe5dc] px-6 py-4">
+      <h2 class="text-lg font-semibold text-[#182023]">Latest Ideas</h2>
+    </div>
+    <div class="divide-y divide-[#dfe5dc]">
+      <% if @latest_ideas.any? %>
+        <% @latest_ideas.each do |idea| %>
+          <%= link_to admin_idea_capture_path(idea), class: "block px-6 py-4 hover:bg-[#eef7f4]" do %>
+            <p class="text-sm font-semibold text-[#182023]"><%= idea.title %></p>
+            <p class="mt-1 text-xs text-[#66716d]"><%= idea.category.presence || "Uncategorized" %> · <%= l(idea.created_at, format: :short) %></p>
+          <% end %>
+        <% end %>
+      <% else %>
+        <p class="px-6 py-4 text-sm text-[#66716d]">No ideas captured yet.</p>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="brand-panel rounded-sm">
+    <div class="border-b border-[#dfe5dc] px-6 py-4">
+      <h2 class="text-lg font-semibold text-[#182023]">Executed Actions</h2>
+    </div>
+    <div class="divide-y divide-[#dfe5dc]">
+      <% if @executed_actions.any? %>
+        <% @executed_actions.each do |draft| %>
+          <%= link_to admin_conversation_path(draft.conversation), class: "block px-6 py-4 hover:bg-[#eef7f4]" do %>
+            <p class="text-sm font-semibold text-[#182023]"><%= draft.conversation.customer.name.presence || "Unknown caller" %></p>
+            <p class="mt-1 truncate font-mono text-xs text-[#66716d]"><%= draft.external_side_effect&.dig("external_id").presence || draft.kind.humanize %></p>
+          <% end %>
+        <% end %>
+      <% else %>
+        <p class="px-6 py-4 text-sm text-[#66716d]">No executed actions yet.</p>
+      <% end %>
+    </div>
+  </section>
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+  <section class="brand-panel rounded-sm">
+    <div class="border-b border-[#dfe5dc] px-6 py-4">
+      <h2 class="text-lg font-semibold text-[#182023]">Smoke Commands</h2>
+    </div>
+    <div class="space-y-3 p-6">
+      <% [
+        "script/seed_demo_conversation",
+        "script/seed_demo_scenarios",
+        "script/smoke_athena_all",
+        "script/smoke_sidecar_review_execute"
+      ].each do |command| %>
+        <div class="rounded-sm border border-[#111718] bg-[#111718] px-3 py-2 font-mono text-xs text-[#e9f0eb]"><%= command %></div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="brand-panel rounded-sm">
+    <div class="border-b border-[#dfe5dc] px-6 py-4">
+      <h2 class="text-lg font-semibold text-[#182023]">Athena Workflows</h2>
+    </div>
+    <div class="grid gap-3 p-6 sm:grid-cols-2">
+      <% @use_cases.each do |use_case| %>
+        <%= link_to use_case_path(use_case[:slug]), class: "rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4 hover:border-[#0f766e] hover:bg-[#eef7f4]" do %>
+          <p class="text-sm font-semibold text-[#182023]"><%= use_case[:title] %></p>
+          <p class="mt-1 text-xs text-[#66716d]"><%= use_case[:space].to_s.humanize %> · <%= use_case[:transport] %></p>
+        <% end %>
+      <% end %>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,38 @@
+<div id="<%= dom_id(conversation, :transcript) %>">
+  <% transcript_items = transcript_event&.data&.dig("data", "transcript") || [] %>
+  <% normalized_transcript_items = Array(transcript_items).map do |item|
+    next item unless item.is_a?(Hash)
+
+    item.merge("role" => TranscriptRoleNormalizer.from_entry(item))
+  end %>
+  <% if transcript_items.present? %>
+    <script type="application/json" data-transcript-json>
+      <%= raw json_escape(normalized_transcript_items.to_json) %>
+    </script>
+    <div class="space-y-4" data-transcript-list></div>
+  <% elsif messages.present? %>
+    <div id="<%= dom_id(conversation, :messages) %>" class="space-y-4">
+      <% messages.each do |message| %>
+        <% role = message.role == "assistant" ? "assistant" : "user" %>
+        <% is_user = role == "user" %>
+        <% label = role == "assistant" ? (conversation.agent_name.presence || "Agent") : "User" %>
+        <div class="flex <%= is_user ? "justify-end" : "justify-start" %>">
+          <div class="max-w-[75%] space-y-1">
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+              <span class="uppercase tracking-wide"><%= label %></span>
+              <span>·</span>
+              <span><%= l(message.sent_at, format: :short) %></span>
+            </div>
+            <div class="rounded-sm border px-4 py-3 text-sm text-slate-700 <%= is_user ? "border-slate-300 bg-white" : "border-slate-200 bg-slate-50" %>">
+              <%= message.content %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div id="<%= dom_id(conversation, :messages) %>">
+      <div class="text-sm text-slate-500">No transcript available yet.</div>
+    </div>
+  <% end %>
+</div>

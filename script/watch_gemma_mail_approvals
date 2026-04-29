@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+set -eu
+
+if [ -d "$HOME/.rbenv" ]; then
+  export RBENV_ROOT="${RBENV_ROOT:-$HOME/.rbenv}"
+  export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+fi
+
+export PATH="$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.0/bin:$PATH"
+
+interval="${POLL_INTERVAL:-5}"
+
+while true; do
+  script/poll_gemma_mail_approvals || true
+  sleep "$interval"
+done

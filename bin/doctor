@@ -1,0 +1,139 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+
+APP_ROOT = File.expand_path("..", __dir__)
+
+Check = Struct.new(:name, :ok, :detail, keyword_init: true)
+
+def load_dotenv
+  path = File.join(APP_ROOT, ".env")
+  return unless File.exist?(path)
+
+  File.each_line(path) do |line|
+    stripped = line.strip
+    next if stripped.empty? || stripped.start_with?("#") || !stripped.include?("=")
+
+    key, value = stripped.split("=", 2)
+    next if key.to_s.empty? || ENV.key?(key)
+
+    ENV[key] = value.to_s.gsub(/\A['"]|['"]\z/, "")
+  end
+end
+
+def capture(*cmd)
+  Open3.capture2e(*cmd, chdir: APP_ROOT)
+end
+
+def check(name)
+  detail = yield
+  Check.new(name: name, ok: true, detail: detail)
+rescue StandardError => error
+  Check.new(name: name, ok: false, detail: error.message)
+end
+
+checks = []
+load_dotenv
+
+checks << check("Ruby") do
+  version = RUBY_VERSION
+  wanted = File.read(File.join(APP_ROOT, ".ruby-version")).strip.delete_prefix("ruby-")
+  raise "running #{version}, expected #{wanted}" unless version.start_with?(wanted)
+
+  version
+end
+
+checks << check("Bundle") do
+  output, status = capture("bundle", "check")
+  raise output.strip unless status.success?
+
+  "installed"
+end
+
+checks << check("Database") do
+  output, status = capture("bin/rails", "db:version")
+  raise output.strip unless status.success?
+
+  output.lines.map(&:strip).reject(&:empty?).last || "ready"
+end
+
+checks << check("Rails tests") do
+  output, status = capture("bin/rails", "test", "test/models/call_state_test.rb")
+  raise output.lines.last(8).join.strip unless status.success?
+
+  summary = output.lines.grep(/runs,/).last.to_s.strip
+  summary.empty? ? "model test passed" : summary
+end
+
+checks << check("Smoke scripts") do
+  missing = %w[
+    script/smoke_athena_all
+    script/seed_demo_scenarios
+    script/watch_gemma_mail_approvals
+  ].reject { |path| File.executable?(File.join(APP_ROOT, path)) }
+  raise "missing executable scripts: #{missing.join(", ")}" if missing.any?
+
+  "present"
+end
+
+settings = {}
+begin
+  output, status = capture(
+    "bin/rails",
+    "runner",
+    <<~RUBY
+      keys = %w[
+        PUBLIC_BASE_URL
+        OPENAI_API_KEY
+        TWILIO_ACCOUNT_SID
+        TWILIO_AUTH_TOKEN
+        ATHENA_APPROVAL_TARGET
+        GEMMA_MAIL_GMAIL_ACCOUNT
+        TWILIO_MESSAGING_SERVICE_SID
+      ]
+      placeholder = /YOUR_|your_|change-this/i
+      puts keys.map { |key|
+        value = AppSetting.fetch(key).to_s
+        ready = value.present? && !value.match?(placeholder)
+        [key, ready].join("=")
+      }
+    RUBY
+  )
+
+  if status.success?
+    output.each_line do |line|
+      key, value = line.strip.split("=", 2)
+      settings[key] = value == "true" if key
+    end
+  end
+rescue StandardError
+  settings = {}
+end
+
+puts "Athena doctor"
+puts "=============="
+
+checks.each do |result|
+  marker = result.ok ? "OK" : "FAIL"
+  puts "#{marker.ljust(4)} #{result.name}: #{result.detail}"
+end
+
+if settings.any?
+  puts
+  puts "Configuration readiness"
+  puts "-----------------------"
+  settings.each do |key, present|
+    marker = present ? "set" : "missing"
+    puts "#{key}=#{marker}"
+  end
+end
+
+puts
+if checks.all?(&:ok)
+  puts "Local exploration is ready. Try: script/seed_demo_scenarios && bin/dev"
+  exit 0
+else
+  puts "Fix the failed checks above, then rerun bin/doctor."
+  exit 1
+end

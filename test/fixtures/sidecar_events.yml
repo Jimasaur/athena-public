@@ -1,0 +1,13 @@
+one:
+  call_state: one
+  conversation: one
+  source: call_summarizer
+  kind: summary.created
+  provider: openai_realtime
+  payload:
+    summary: Asked about shipment ETA and delivery window.
+  evidence:
+    transcript_call_event_id: 1
+  changes_call_behavior: false
+  requires_review: true
+  occurred_at: 2026-02-24 10:10:00
