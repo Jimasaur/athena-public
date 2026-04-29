@@ -2,6 +2,7 @@
 
 require "json"
 require "securerandom"
+require "uri"
 require_relative "../config/environment"
 
 class SmokeReport
@@ -64,6 +65,18 @@ module SmokeSupport
     return {} if secret.blank?
 
     { "X-Athena-Tool-Secret" => secret }
+  end
+
+  def twilio_headers_for(path, params)
+    return {} unless ActiveModel::Type::Boolean.new.cast(AppSetting.fetch("TWILIO_VERIFY_WEBHOOK_SIGNATURES"))
+
+    auth_token = AppSetting.fetch("TWILIO_AUTH_TOKEN").to_s
+    public_base_url = AppSetting.fetch("PUBLIC_BASE_URL").to_s
+    return {} if auth_token.blank? || public_base_url.blank?
+
+    url = URI.join(public_base_url, path).to_s
+    signature = Twilio::Security::RequestValidator.new(auth_token).build_signature_for(url, params)
+    { "X-Twilio-Signature" => signature }
   end
 
   def smoke_customer(phone_number: ENV.fetch("CALLER_PHONE", "+14155550177"))

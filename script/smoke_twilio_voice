@@ -10,17 +10,24 @@ call_sid = ENV.fetch("CALL_SID", "SMOKE-TWILIO-#{SecureRandom.hex(4)}")
 from_number = SmokeSupport.allowed_smoke_caller
 
 report.check("inbound OpenAI Realtime TwiML") do
+  params = {
+    "CallSid" => call_sid,
+    "From" => from_number,
+    "To" => agent.twilio_number
+  }
   session.post "/voice/inbound",
-    params: {
-      "CallSid" => call_sid,
-      "From" => from_number,
-      "To" => agent.twilio_number
-    }
+    params: params,
+    headers: SmokeSupport.twilio_headers_for("/voice/inbound", params)
 
   report.assert(session.response.status == 200, "expected 200, got #{session.response.status}: #{session.response.body}")
   report.assert(session.response.body.include?("/ws/twilio-media"), "expected media stream URL")
-  report.assert(session.response.body.include?("/webhooks/twilio/transcription"), "expected transcription callback")
+  if ActiveModel::Type::Boolean.new.cast(AppSetting.fetch("OPENAI_REALTIME_TWILIO_TRANSCRIPTION_ENABLED", false))
+    report.assert(session.response.body.include?("/webhooks/twilio/transcription"), "expected transcription callback")
+  else
+    report.assert(!session.response.body.include?("/webhooks/twilio/transcription"), "did not expect transcription callback")
+  end
   report.assert(session.response.body.include?("name=\"provider\" value=\"openai_realtime\""), "expected OpenAI Realtime provider")
+  report.assert(session.response.body.include?("name=\"stream_token\""), "expected stream token parameter")
 
   conversation = Conversation.find_by!(twilio_call_sid: call_sid)
   report.assert(conversation.call_state.present?, "expected call state")
@@ -28,14 +35,16 @@ report.check("inbound OpenAI Realtime TwiML") do
 end
 
 report.check("status webhook") do
+  params = {
+    "CallSid" => call_sid,
+    "CallStatus" => "completed",
+    "Direction" => "outbound-api",
+    "From" => agent.twilio_number,
+    "To" => from_number
+  }
   session.post "/voice/outbound/status",
-    params: {
-      "CallSid" => call_sid,
-      "CallStatus" => "completed",
-      "Direction" => "outbound-api",
-      "From" => agent.twilio_number,
-      "To" => from_number
-    }
+    params: params,
+    headers: SmokeSupport.twilio_headers_for("/voice/outbound/status", params)
 
   report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
   conversation = Conversation.find_by!(twilio_call_sid: call_sid)
@@ -43,13 +52,15 @@ report.check("status webhook") do
 end
 
 report.check("transcription webhook") do
+  params = {
+    "CallSid" => call_sid,
+    "Track" => "inbound",
+    "TranscriptionText" => "This is a smoke transcription.",
+    "Timestamp" => Time.current.iso8601
+  }
   session.post "/webhooks/twilio/transcription",
-    params: {
-      "CallSid" => call_sid,
-      "Track" => "inbound",
-      "TranscriptionText" => "This is a smoke transcription.",
-      "Timestamp" => Time.current.iso8601
-    }
+    params: params,
+    headers: SmokeSupport.twilio_headers_for("/webhooks/twilio/transcription", params)
 
   report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
   conversation = Conversation.find_by!(twilio_call_sid: call_sid)

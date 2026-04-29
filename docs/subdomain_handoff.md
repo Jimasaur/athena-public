@@ -189,6 +189,7 @@ Also required for live calls:
 OPENAI_API_KEY=...
 TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
+TWILIO_VERIFY_WEBHOOK_SIGNATURES=true
 ```
 
 ## Twilio Number Setup
@@ -238,6 +239,7 @@ Expected: XML response containing:
 <Connect>
 wss://athena.example.com/ws/twilio-media
 provider=openai_realtime
+stream_token
 ```
 
 Then place a real call to `+1 555-123-4567` and check:
@@ -256,4 +258,6 @@ https://athena.example.com/admin/idea_captures
 - Use a dedicated SSH key for the tunnel.
 - Prefer a low-privilege tunnel user on the AWS proxy host.
 - Enable admin auth before sharing the public admin UI broadly.
+- Enable Twilio webhook signature verification before using a public tunnel.
+- Keep Rails bound to `127.0.0.1`; only the SSH reverse tunnel should reach it.
 - Healthcare demos should avoid PHI. Athena is currently a demo/workshop ideation stack, not a production clinical system.

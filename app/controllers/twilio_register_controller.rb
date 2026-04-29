@@ -1,3 +1,5 @@
+require "securerandom"
+
 class TwilioRegisterController < ApplicationController
   REALTIME_PROVIDER = "openai_realtime"
 
@@ -87,6 +89,7 @@ class TwilioRegisterController < ApplicationController
 
   def openai_realtime_twiml(conversation, agent_setting, from_number, to_number, call_sid)
     stream_url = twilio_stream_url
+    stream_token = twilio_stream_token_for(conversation)
 
     Twilio::TwiML::VoiceResponse.new do |response|
       if twilio_realtime_transcription_enabled?
@@ -108,6 +111,7 @@ class TwilioRegisterController < ApplicationController
           stream.parameter(name: "agent_name", value: agent_setting.name) if agent_setting&.name.present?
           stream.parameter(name: "from_number", value: from_number) if from_number.present?
           stream.parameter(name: "to_number", value: to_number) if to_number.present?
+          stream.parameter(name: "stream_token", value: stream_token) if stream_token.present?
         end
       end
     end.to_s
@@ -157,6 +161,26 @@ class TwilioRegisterController < ApplicationController
     )
 
     conversation
+  end
+
+  def twilio_stream_token_for(conversation)
+    call_state = conversation.call_state ||
+      CallState.ensure_for_conversation(
+        conversation,
+        provider: REALTIME_PROVIDER,
+        call_id: conversation.twilio_call_sid || "conversation-#{conversation.id}",
+        status: conversation.status == "completed" ? "completed" : "active"
+      )
+    state = call_state.state.to_h
+    token = state["twilio_stream_token"].presence || SecureRandom.urlsafe_base64(32)
+
+    call_state.update!(
+      state: state.merge(
+        "twilio_stream_token" => token,
+        "twilio_stream_token_created_at" => Time.current.iso8601
+      )
+    )
+    token
   end
 
   def sync_twilio_status!(conversation, status)

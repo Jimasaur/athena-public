@@ -57,17 +57,23 @@ class TwilioMediaStream
     stream_sid = payload.dig("start", "streamSid") || payload["streamSid"]
     return if call_sid.blank?
 
-    stream_map[stream_sid] = call_sid if stream_sid.present?
-    stream_recordings[stream_sid] = [] if stream_sid.present?
-
     conversation = conversation_for_call(call_sid)
     return if conversation.blank?
+
+    unless valid_stream_token?(conversation, payload)
+      record_rejected_start(conversation, call_sid, payload)
+      close_socket(ws)
+      return
+    end
+
+    stream_map[stream_sid] = call_sid if stream_sid.present?
+    stream_recordings[stream_sid] = [] if stream_sid.present?
 
     conversation.call_events.create!(
       twilio_call_sid: call_sid,
       status: "twilio_stream_started",
       direction: "inbound",
-      data: payload
+      data: sanitized_stream_payload(payload)
     )
 
     start_openai_realtime_bridge(ws, conversation, call_sid, stream_sid, payload) if openai_realtime_stream?(conversation, payload)
@@ -124,6 +130,45 @@ class TwilioMediaStream
     provider = custom_parameters["provider"].presence || conversation.call_state&.provider
 
     provider.to_s == "openai_realtime"
+  end
+
+  def valid_stream_token?(conversation, payload)
+    expected = conversation.call_state&.state.to_h["twilio_stream_token"].to_s
+    provided = stream_token_from(payload).to_s
+    return false if expected.blank? || provided.blank?
+    return false unless expected.bytesize == provided.bytesize
+
+    ActiveSupport::SecurityUtils.secure_compare(provided, expected)
+  end
+
+  def stream_token_from(payload)
+    custom_parameters = payload.dig("start", "customParameters") || {}
+    custom_parameters["stream_token"] || custom_parameters["twilio_stream_token"]
+  end
+
+  def record_rejected_start(conversation, call_sid, payload)
+    conversation.call_events.create!(
+      twilio_call_sid: call_sid,
+      status: "twilio_stream_rejected",
+      direction: "inbound",
+      data: sanitized_stream_payload(payload).merge("reason" => "invalid_stream_token")
+    )
+  rescue StandardError => error
+    Rails.logger.warn("[TwilioMediaStream] rejected start #{error.class}: #{error.message}")
+  end
+
+  def sanitized_stream_payload(payload)
+    JSON.parse(JSON.generate(payload)).tap do |copy|
+      custom_parameters = copy.dig("start", "customParameters")
+      custom_parameters.delete("stream_token") if custom_parameters.is_a?(Hash)
+      custom_parameters.delete("twilio_stream_token") if custom_parameters.is_a?(Hash)
+    end
+  end
+
+  def close_socket(ws)
+    ws&.close(1008, "Invalid stream token")
+  rescue StandardError
+    nil
   end
 
   def start_openai_realtime_bridge(ws, conversation, call_sid, stream_sid, payload)

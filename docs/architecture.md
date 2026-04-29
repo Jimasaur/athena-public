@@ -119,5 +119,7 @@ Before production:
 - set `ADMIN_USERNAME` and `ADMIN_PASSWORD`
 - set `ATHENA_TOOL_SECRET`
 - enable `TWILIO_VERIFY_WEBHOOK_SIGNATURES`
+- keep Rails bound to `127.0.0.1` when exposed through the AWS reverse tunnel
+- require the per-call `stream_token` generated in TwiML before accepting Twilio Media Stream audio
 - replace temporary tunnels with a stable deployment URL
 - keep PHI out of healthcare demos until legal, security, retention, and vendor review are complete

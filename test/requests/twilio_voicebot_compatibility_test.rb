@@ -25,10 +25,12 @@ class TwilioVoicebotCompatibilityTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "inboundTrackLabel=\"user\""
     assert_not_includes response.body, "outboundTrackLabel=\"agent\""
     assert_includes response.body, "name=\"provider\" value=\"openai_realtime\""
+    assert_includes response.body, "name=\"stream_token\""
 
     conversation = Conversation.find_by!(twilio_call_sid: "CA123")
     assert_equal "openai_realtime", conversation.call_state.provider
     assert_equal "rev-cycle-ideation-session", conversation.call_state.use_case_slug
+    assert conversation.call_state.state["twilio_stream_token"].present?
   end
 
   test "voice inbound ignores provider overrides" do
@@ -48,6 +50,7 @@ class TwilioVoicebotCompatibilityTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "wss://config.example.test/ws/twilio-media"
     assert_includes response.body, "name=\"provider\" value=\"openai_realtime\""
     assert_includes response.body, "name=\"call_sid\" value=\"CA-openai-realtime\""
+    assert_includes response.body, "name=\"stream_token\""
     assert_not_includes response.body, "https://config.example.test/webhooks/twilio/transcription"
 
     conversation = Conversation.find_by!(twilio_call_sid: "CA-openai-realtime")
