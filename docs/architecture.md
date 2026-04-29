@@ -118,6 +118,8 @@ Before production:
 
 - set `ADMIN_USERNAME` and `ADMIN_PASSWORD`
 - set `ATHENA_TOOL_SECRET`
+- set `ATHENA_PUBLIC_DEMO_MODE=true` for public demos that still use the development database
+- set `ADMIN_AUTH_REQUIRED=true` and `ATHENA_TOOL_SECRET_REQUIRED=true` if you want fail-closed auth outside demo mode
 - enable `TWILIO_VERIFY_WEBHOOK_SIGNATURES`
 - keep Rails bound to `127.0.0.1` when exposed through the AWS reverse tunnel
 - require the per-call `stream_token` generated in TwiML before accepting Twilio Media Stream audio

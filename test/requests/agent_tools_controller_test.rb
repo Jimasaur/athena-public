@@ -124,6 +124,25 @@ class AgentToolsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Athena", response.parsed_body.dig("app", "name")
   end
 
+  test "tool endpoints fail closed when tool secret is required but missing" do
+    AppSetting.create!(key: "ATHENA_TOOL_SECRET_REQUIRED", value: "true")
+
+    post agent_tools_status_path
+
+    assert_response :unauthorized
+  end
+
+  test "tool endpoints require configured secret in public demo mode" do
+    AppSetting.create!(key: "ATHENA_PUBLIC_DEMO_MODE", value: "true")
+    AppSetting.create!(key: "ATHENA_TOOL_SECRET", value: "tool-secret")
+
+    post agent_tools_status_path
+    assert_response :unauthorized
+
+    post agent_tools_status_path, headers: { "X-Athena-Tool-Secret" => "tool-secret" }
+    assert_response :success
+  end
+
   test "dispatcher routes status command" do
     post agent_tools_command_path, params: { command: "status" }
 

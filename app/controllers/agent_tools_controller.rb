@@ -1,6 +1,6 @@
 class AgentToolsController < ApplicationController
   skip_before_action :verify_authenticity_token
-  before_action :verify_tool_secret!, if: -> { tool_secret.present? }
+  before_action :verify_tool_secret!
 
   def lookup
     phone_number = params[:phone_number] || params[:phone]
@@ -683,8 +683,11 @@ class AgentToolsController < ApplicationController
   end
 
   def verify_tool_secret!
-    provided = request.headers["X-Athena-Tool-Secret"].to_s
     secret = tool_secret
+    return if secret.blank? && !tool_secret_required?
+    return head :unauthorized if secret.blank?
+
+    provided = request.headers["X-Athena-Tool-Secret"].to_s
     if provided.blank? || provided.bytesize != secret.bytesize
       return head :unauthorized
     end
@@ -694,5 +697,17 @@ class AgentToolsController < ApplicationController
 
   def tool_secret
     AppSetting.fetch("ATHENA_TOOL_SECRET").to_s
+  end
+
+  def tool_secret_required?
+    Rails.env.production? ||
+      truthy_setting?("ATHENA_PUBLIC_DEMO_MODE") ||
+      truthy_setting?("ATHENA_TOOL_SECRET_REQUIRED")
+  end
+
+  def truthy_setting?(key)
+    value = AppSetting.fetch(key)
+    value = ENV[key] if value.nil?
+    ActiveModel::Type::Boolean.new.cast(value)
   end
 end

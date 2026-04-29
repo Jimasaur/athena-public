@@ -147,6 +147,6 @@ bin/doctor
 
 ## Notes
 
-- Admin UI uses HTTP basic auth when `ADMIN_USERNAME` or `ADMIN_PASSWORD` is configured.
+- Admin UI uses HTTP basic auth when configured. In `ATHENA_PUBLIC_DEMO_MODE` or production, missing admin/tool secrets fail closed.
 - Data is stored in SQLite for development.
 - Live voice calls use Twilio Media Streams plus OpenAI Realtime.

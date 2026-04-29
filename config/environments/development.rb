@@ -1,6 +1,8 @@
 require "active_support/core_ext/integer/time"
 require "uri"
 
+public_demo_mode = ActiveModel::Type::Boolean.new.cast(ENV["ATHENA_PUBLIC_DEMO_MODE"])
+
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
@@ -11,10 +13,13 @@ Rails.application.configure do
   config.eager_load = false
 
   # Show full error reports.
-  config.consider_all_requests_local = true
+  config.consider_all_requests_local = !public_demo_mode
 
   # Enable server timing.
-  config.server_timing = true
+  config.server_timing = !public_demo_mode
+
+  # Keep public demos out of development's very chatty debug logging.
+  config.log_level = public_demo_mode ? :info : :debug
 
   # Enable/disable Action Controller caching. By default Action Controller caching is disabled.
   # Run rails dev:cache to toggle Action Controller caching.
@@ -48,16 +53,16 @@ Rails.application.configure do
   config.active_record.migration_error = :page_load
 
   # Highlight code that triggered database queries in logs.
-  config.active_record.verbose_query_logs = true
+  config.active_record.verbose_query_logs = !public_demo_mode
 
   # Append comments with runtime information tags to SQL queries in logs.
-  config.active_record.query_log_tags_enabled = true
+  config.active_record.query_log_tags_enabled = !public_demo_mode
 
   # Highlight code that enqueued background job in logs.
-  config.active_job.verbose_enqueue_logs = true
+  config.active_job.verbose_enqueue_logs = !public_demo_mode
 
   # Highlight code that triggered redirect in logs.
-  config.action_dispatch.verbose_redirect_logs = true
+  config.action_dispatch.verbose_redirect_logs = !public_demo_mode
 
   # Suppress logger output for asset requests.
   config.assets.quiet = true
@@ -66,7 +71,7 @@ Rails.application.configure do
   # config.i18n.raise_on_missing_translations = true
 
   # Annotate rendered view with file names.
-  config.action_view.annotate_rendered_view_with_filenames = true
+  config.action_view.annotate_rendered_view_with_filenames = !public_demo_mode
 
   # Uncomment if you wish to allow Action Cable access from any origin.
   # config.action_cable.disable_request_forgery_protection = true
