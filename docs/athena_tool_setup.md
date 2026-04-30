@@ -44,7 +44,7 @@ The bridge sends:
 ```json
 {
   "command": "semantic_request",
-  "request": "Email Jimmy a quick recap of this call.",
+  "request": "Email the retreat coordinator a quick recap of this call.",
   "conversation_id": 123,
   "call_sid": "CA..."
 }

@@ -14,7 +14,7 @@ class AthenaEmailApprovalSidecarServiceTest < ActiveSupport::TestCase
     conversation.messages.destroy_all
     conversation.customer.update!(metadata: conversation.customer.metadata.merge("email" => "operator@example.com"))
     conversation.messages.create!(role: "assistant", content: "Sure, here's the draft subject Weather forecast for tomorrow", sent_at: 4.minutes.ago)
-    conversation.messages.create!(role: "assistant", content: "Jimmy, here is the weather placeholder for White Bear Lake tomorrow.", sent_at: 3.minutes.ago)
+    conversation.messages.create!(role: "assistant", content: "Jordan, here is the weather placeholder for White Bear Lake tomorrow.", sent_at: 3.minutes.ago)
     conversation.messages.create!(role: "user", content: "Email me this and send me approval.", sent_at: 2.minutes.ago)
 
     assert_enqueued_with(job: GemmaMailApprovalJob) do

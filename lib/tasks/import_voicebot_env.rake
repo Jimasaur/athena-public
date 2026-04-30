@@ -1,7 +1,11 @@
 namespace :athena do
   desc "Import shared Twilio/public URL settings from an OpenAI realtime voicebot env file"
   task :import_voicebot_env, [ :env_file ] => :environment do |_task, args|
-    env_file = args[:env_file].presence || ENV["VOICEBOT_ENV_FILE"].presence || "/home/jimasaur/jim_dev/openai-realtime-engine/.env.voice-bot"
+    env_file = args[:env_file].presence || ENV["VOICEBOT_ENV_FILE"].presence
+
+    if env_file.blank?
+      abort "Provide the env file path as athena:import_voicebot_env[/path/to/.env.voice-bot] or VOICEBOT_ENV_FILE=/path/to/.env.voice-bot."
+    end
 
     unless File.exist?(env_file)
       abort "Env file not found: #{env_file}"

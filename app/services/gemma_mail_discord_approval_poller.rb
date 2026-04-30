@@ -9,7 +9,7 @@ class GemmaMailDiscordApprovalPoller
   end
 
   Approval = Struct.new(:approval_id, :to, :subject, :body, :message_id, :timestamp_ms, keyword_init: true)
-  Response = Struct.new(:kind, :content, :message_id, :timestamp_ms, :edits, keyword_init: true)
+  Response = Struct.new(:kind, :content, :message_id, :timestamp_ms, :edits, :author_id, :reply_to_message_id, :approval_id, keyword_init: true)
 
   DEFAULT_LIMIT = 30
   DEFAULT_TIMEOUT_SECONDS = 45
@@ -22,7 +22,7 @@ class GemmaMailDiscordApprovalPoller
     @profile = profile.to_s.strip.presence || AppSetting.fetch("GEMMA_MAIL_OPENCLAW_PROFILE").to_s.strip.presence || "gemma4"
     @channel = channel.to_s.strip.presence || AppSetting.fetch("ATHENA_APPROVAL_CHANNEL").to_s.strip.presence || AppSetting.fetch("GEMMA_MAIL_APPROVAL_CHANNEL").to_s.strip.presence || "discord"
     @target = target.to_s.strip.presence || AppSetting.fetch("ATHENA_APPROVAL_TARGET").to_s.strip.presence || AppSetting.fetch("ATHENA_DISCORD_APPROVAL_TARGET").to_s.strip.presence || AppSetting.fetch("GEMMA_MAIL_APPROVAL_TARGET").to_s.strip.presence
-    @account = account.to_s.strip.presence || AppSetting.fetch("GEMMA_MAIL_GMAIL_ACCOUNT").to_s.strip.presence || "operator@example.com"
+    @account = account.to_s.strip.presence || AppSetting.fetch("GEMMA_MAIL_GMAIL_ACCOUNT").to_s.strip.presence || "demo@example.com"
     @limit = limit.to_i.positive? ? limit.to_i : DEFAULT_LIMIT
     @timeout_seconds = timeout_seconds.to_i.positive? ? timeout_seconds.to_i : DEFAULT_TIMEOUT_SECONDS
     @openclaw_cli = normalize_openclaw_cli(openclaw_cli)
@@ -31,6 +31,7 @@ class GemmaMailDiscordApprovalPoller
 
   def call
     return unavailable("GEMMA_MAIL_APPROVAL_TARGET is required.") if @target.blank?
+    return unavailable("ATHENA_APPROVAL_DISCORD_APPROVER_IDS is required.") if allowed_approver_ids.blank?
 
     read_result = read_messages
     return read_result unless read_result[:ok]
@@ -73,30 +74,51 @@ class GemmaMailDiscordApprovalPoller
   end
 
   def process_messages(messages)
-    current_approval = nil
+    approvals_by_id = {}
+    approvals_by_message_id = {}
     processed = []
 
     messages.sort_by { |message| message["timestampMs"].to_i }.each do |message|
       approval = parse_approval(message)
       if approval
-        current_approval = terminal_approval?(approval.approval_id) ? nil : approval
+        unless terminal_approval?(approval.approval_id) || superseded_approval_message?(approval)
+          approvals_by_id[approval.approval_id] = approval
+          approvals_by_message_id[approval.message_id] = approval
+        end
+        next
+      end
+      if (prompt_approval_id = clarification_prompt_approval_id(message))
+        approvals_by_message_id[message["id"].to_s] = approvals_by_id[prompt_approval_id] if approvals_by_id[prompt_approval_id]
         next
       end
 
       response = parse_response(message)
-      next unless response && current_approval
+      next unless response
+
+      current_approval = approval_for_response(response, approvals_by_id, approvals_by_message_id)
+      next unless current_approval
       next if response.timestamp_ms <= current_approval.timestamp_ms
       next if processed_reply?(response.message_id)
 
       result = process_response(current_approval, response)
-      processed << result
-      current_approval = result[:action] == "edit" && result[:edits].blank? ? current_approval : nil
+      processed << result if result
     end
 
     processed
   end
 
   def process_response(approval, response)
+    conversation = conversation_for(approval.approval_id)
+    return unless conversation
+
+    conversation.with_lock do
+      return if terminal_approval?(approval.approval_id) || processed_reply?(response.message_id)
+
+      process_response_without_lock(approval, response)
+    end
+  end
+
+  def process_response_without_lock(approval, response)
     case response.kind
     when :approve
       record_event("email_approval.discord_approved", approval, response, requires_review: false)
@@ -222,13 +244,16 @@ class GemmaMailDiscordApprovalPoller
 
   def parse_response(message)
     return unless human_message?(message)
+    author_id = message.dig("author", "id").to_s
+    return unless allowed_approver_ids.include?(author_id)
 
     content = message["content"].to_s.strip
     normalized = content.downcase.gsub(/[[:punct:]]+\z/, "").strip
+    approval_id = extract_approval_id(content)
     kind =
-      if normalized.match?(/\A(yes|y|approve|approved|send|send it|go ahead|do it|proceed)\z/)
+      if normalized.match?(/\b(yes|y|approve|approved|send|send it|go ahead|do it|proceed)\b/)
         :approve
-      elsif normalized.match?(/\A(no|n|cancel|discard|stop)\z/)
+      elsif normalized.match?(/\b(no|n|cancel|discard|stop)\b/)
         :cancel
       elsif normalized.match?(/\Aedit\b/) || edit_instruction?(content)
         :edit
@@ -240,7 +265,10 @@ class GemmaMailDiscordApprovalPoller
       content: content,
       message_id: message["id"].to_s,
       timestamp_ms: message["timestampMs"].to_i,
-      edits: nil
+      edits: nil,
+      author_id: author_id,
+      reply_to_message_id: reply_to_message_id(message),
+      approval_id: approval_id
     )
   end
 
@@ -303,6 +331,7 @@ class GemmaMailDiscordApprovalPoller
   end
 
   def stored_approval_payload(approval_id, visible_subject: nil, message_id: nil)
+    _visible_subject = visible_subject
     return {} if approval_id.blank?
 
     candidates = SidecarEvent.where(kind: %w[
@@ -319,16 +348,50 @@ class GemmaMailDiscordApprovalPoller
     end
     return matched_by_message.payload.to_h if matched_by_message
 
-    matched_by_subject = candidates.find do |event|
-      event.payload.to_h["subject"].to_s == visible_subject.to_s
-    end
-    return matched_by_subject.payload.to_h if matched_by_subject
-
     candidates.first&.payload.to_h || {}
   end
 
   def human_message?(message)
     !message.dig("author", "bot")
+  end
+
+  def approval_for_response(response, approvals_by_id, approvals_by_message_id)
+    return approvals_by_message_id[response.reply_to_message_id] if response.reply_to_message_id.present?
+    return approvals_by_id[response.approval_id] if response.approval_id.present?
+
+    nil
+  end
+
+  def reply_to_message_id(message)
+    message["replyTo"].presence ||
+      message["reply_to"].presence ||
+      message.dig("referencedMessage", "id").presence ||
+      message.dig("referenced_message", "id").presence ||
+      message.dig("messageReference", "messageId").presence ||
+      message.dig("message_reference", "message_id").presence
+  end
+
+  def extract_approval_id(content)
+    content.to_s[/\bathena-conversation-\d+(?:-[A-Za-z0-9_]+)*\b/, 0]
+  end
+
+  def clarification_prompt_approval_id(message)
+    return unless message.dig("author", "bot")
+
+    message["content"].to_s[/\bAthena approval (athena-conversation-\d+(?:-[A-Za-z0-9_]+)*): what should I change\?/i, 1]
+  end
+
+  def allowed_approver_ids
+    @allowed_approver_ids ||= AppSetting.fetch("ATHENA_APPROVAL_DISCORD_APPROVER_IDS").to_s.split(/[,\s]+/).reject(&:blank?)
+  end
+
+  def superseded_approval_message?(approval)
+    SidecarEvent.where(kind: "email_approval.sent_to_discord").any? do |event|
+      payload = event.payload.to_h
+      payload["approval_id"] == approval.approval_id &&
+        payload["discord_approval_message_id"].present? &&
+        payload["discord_approval_message_id"] != approval.message_id
+    end
   end
 
   def terminal_approval?(approval_id)
@@ -373,7 +436,8 @@ class GemmaMailDiscordApprovalPoller
         recipient: approval.to,
         subject: approval.subject,
         body: approval.body,
-        discord_approval_message_id: approval.message_id,
+        discord_approval_message_id: discord_approval_message_id_for(kind, approval, result),
+        superseded_discord_approval_message_id: superseded_discord_approval_message_id_for(kind, approval, result),
         discord_response_message_id: response.message_id,
         discord_response: response.content,
         result: result
@@ -390,6 +454,19 @@ class GemmaMailDiscordApprovalPoller
   def conversation_for(approval_id)
     conversation_id = approval_id.to_s[/\Aathena-conversation-(\d+)(?:-.+)?\z/, 1]
     Conversation.find_by(id: conversation_id) if conversation_id
+  end
+
+  def discord_approval_message_id_for(kind, approval, result)
+    return result.to_h[:reply].presence || approval.message_id if kind == "email_approval.sent_to_discord"
+
+    approval.message_id
+  end
+
+  def superseded_discord_approval_message_id_for(kind, approval, result)
+    return unless kind == "email_approval.sent_to_discord"
+    return unless result.to_h[:reply].present?
+
+    approval.message_id
   end
 
   def parse_json(output)

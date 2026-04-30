@@ -10,7 +10,7 @@ class TwilioVoicebotCompatibilityTest < ActionDispatch::IntegrationTest
 
   test "voice inbound alias returns OpenAI Realtime TwiML by default" do
     Customer.find_or_create_by!(phone_number: "+14155552001") do |customer|
-      customer.name = "Jimmy"
+      customer.name = "Jordan"
     end.update!(metadata: { "email" => "operator@example.com" })
 
     post "/voice/inbound", params: {
@@ -35,7 +35,7 @@ class TwilioVoicebotCompatibilityTest < ActionDispatch::IntegrationTest
 
   test "voice inbound ignores provider overrides" do
     Customer.find_or_create_by!(phone_number: "+14155552001") do |customer|
-      customer.name = "Jimmy"
+      customer.name = "Jordan"
     end
 
     post "/voice/inbound", params: {
@@ -113,7 +113,7 @@ class TwilioVoicebotCompatibilityTest < ActionDispatch::IntegrationTest
     conversation.messages.destroy_all
     conversation.customer.update!(metadata: conversation.customer.metadata.merge("email" => "operator@example.com"))
     conversation.messages.create!(role: "assistant", content: "Here is the draft subject Demo follow up", sent_at: 3.minutes.ago)
-    conversation.messages.create!(role: "assistant", content: "Jimmy, this is the demo follow up body.", sent_at: 2.minutes.ago)
+    conversation.messages.create!(role: "assistant", content: "Jordan, this is the demo follow up body.", sent_at: 2.minutes.ago)
     conversation.messages.create!(role: "user", content: "Email me this and send me approval.", sent_at: 1.minute.ago)
 
     assert_enqueued_with(job: AthenaTranscriptEmailJob) do

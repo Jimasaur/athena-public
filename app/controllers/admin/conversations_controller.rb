@@ -39,6 +39,7 @@ module Admin
       @action_drafts = @conversation.action_drafts.order(created_at: :desc)
       @timeline_entries = ConversationTimeline.new(@conversation).entries
       @review_state = ConversationReviewState.new(@conversation).to_h
+      @live_audio_token = LiveAudioAuthorization.token_for(@conversation)
     end
 
     def destroy

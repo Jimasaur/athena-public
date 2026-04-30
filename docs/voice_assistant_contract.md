@@ -108,7 +108,7 @@ Athena should send the assistant a structured request like this:
   "user_request": "Capture this rev cycle improvement idea.",
   "context": {
     "conversation_id": "11",
-    "call_sid": "CA1e6a47c9b813b945c1216b76c39b2476",
+    "call_sid": "CA_EXAMPLE",
     "caller": "+14155552001",
     "called_number": "+15551234567"
   },

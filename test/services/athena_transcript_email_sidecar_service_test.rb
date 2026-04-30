@@ -14,10 +14,10 @@ class AthenaTranscriptEmailSidecarServiceTest < ActiveSupport::TestCase
     conversation.messages.destroy_all
     conversation.update!(status: "completed", summary: "Caller asked for a test follow-up.")
     conversation.customer.update!(
-      name: "Jimmy",
+      name: "Jordan",
       metadata: conversation.customer.metadata.merge("email" => "operator@example.com")
     )
-    conversation.messages.create!(role: "assistant", content: "Hi Jimmy, I'm Athena.", sent_at: 2.minutes.ago)
+    conversation.messages.create!(role: "assistant", content: "Hi Jordan, I'm Athena.", sent_at: 2.minutes.ago)
     conversation.messages.create!(role: "user", content: "Please send me the transcript.", sent_at: 1.minute.ago)
 
     assert_enqueued_with(job: GemmaMailApprovalJob) do
@@ -35,7 +35,7 @@ class AthenaTranscriptEmailSidecarServiceTest < ActiveSupport::TestCase
     assert_equal "call_transcript", event.payload["category"]
     assert_equal "operator@example.com", event.payload["recipient"]
     assert_includes event.payload["body"], "Transcript:"
-    assert_includes event.payload["body"], "Athena: Hi Jimmy"
+    assert_includes event.payload["body"], "Athena: Hi Jordan"
     assert_includes event.payload["body"], "Caller: Please send me the transcript."
   end
 

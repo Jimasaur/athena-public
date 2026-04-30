@@ -95,7 +95,7 @@
                 <span class="truncate"><%= app_setting.key %></span>
               </button>
               <%= form_with url: admin_app_setting_path(app_setting), method: :patch, local: true, class: "hidden w-full items-center gap-2", data: { inline_form: true } do %>
-                <%= hidden_field_tag "app_setting[value]", app_setting.value %>
+                <%= hidden_field_tag "app_setting[value]", app_setting_form_value(app_setting) %>
                 <%= text_field_tag "app_setting[key]",
                   app_setting.key,
                   class: "w-full border-0 border-b border-slate-300 bg-transparent px-0 py-0.5 font-mono text-xs uppercase text-slate-900 focus:border-orange-400 focus:outline-none focus:ring-0",
@@ -113,13 +113,14 @@
           <td class="px-6 py-4 align-top">
             <div data-inline-editor class="w-full">
               <button type="button" data-inline-display class="inline-flex max-w-full items-center border-b border-dotted border-slate-400 pb-0.5 font-mono text-xs text-slate-700 hover:border-slate-600">
-                <span class="truncate"><%= app_setting.value.presence || "Not set" %></span>
+                <span class="truncate"><%= app_setting_display_value(app_setting) %></span>
               </button>
               <%= form_with url: admin_app_setting_path(app_setting), method: :patch, local: true, class: "hidden w-full items-center gap-2", data: { inline_form: true } do %>
                 <%= hidden_field_tag "app_setting[key]", app_setting.key %>
                 <%= text_field_tag "app_setting[value]",
-                  app_setting.value,
-                  placeholder: "Not set",
+                  app_setting_form_value(app_setting),
+                  type: app_setting_value_field_type(app_setting),
+                  placeholder: app_setting_value_placeholder(app_setting),
                   class: "w-full border-0 border-b border-slate-300 bg-transparent px-0 py-0.5 font-mono text-xs text-slate-700 focus:border-orange-400 focus:outline-none focus:ring-0",
                   data: { inline_input: true } %>
                 <button type="submit" data-inline-action="save" class="inline-flex items-center gap-1 rounded-sm border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50" aria-label="Save" title="Save">

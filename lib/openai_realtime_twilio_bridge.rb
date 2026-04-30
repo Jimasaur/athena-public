@@ -143,6 +143,8 @@ class OpenaiRealtimeTwilioBridge
   def call_athena_command(arguments)
     url = athena_command_url
     return { ok: false, error: "ATHENA_INTERNAL_BASE_URL or PUBLIC_BASE_URL is required for Realtime tool calls." } if url.blank?
+    policy = OutboundUrlPolicy.internal_callback(url)
+    return { ok: false, error: policy.error } unless policy.ok?
 
     payload = {
       command: arguments["command"].presence || "semantic_request",
@@ -151,14 +153,14 @@ class OpenaiRealtimeTwilioBridge
       call_sid: @call_sid
     }.compact
 
-    uri = URI.parse(url)
+    uri = policy.uri
     request = Net::HTTP::Post.new(uri)
     request["Content-Type"] = "application/json"
     request["X-Athena-Tool-Secret"] = tool_secret if tool_secret.present?
+    request[AgentToolContext::HEADER] = AgentToolContext.token_for(conversation: @conversation, call_sid: @call_sid).to_s
     request.body = payload.to_json
 
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = uri.scheme == "https"
+    http = OutboundUrlPolicy.prepare_http(uri, policy.ipaddr)
     http.open_timeout = 2
     http.read_timeout = TOOL_TIMEOUT_SECONDS
 

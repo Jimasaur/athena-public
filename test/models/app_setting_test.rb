@@ -24,4 +24,19 @@ class AppSettingTest < ActiveSupport::TestCase
   ensure
     ENV["MISSING_TEST_KEY"] = original
   end
+
+  test "detects sensitive keys" do
+    assert AppSetting.sensitive_key?("TWILIO_AUTH_TOKEN")
+    assert AppSetting.sensitive_key?("ATHENA_IDEAS_DISCORD_WEBHOOK_URL")
+    assert AppSetting.sensitive_key?("GOOGLE_CALENDAR_TOOL_URL_BEARER")
+    assert_not AppSetting.sensitive_key?("PUBLIC_BASE_URL")
+    assert_not AppSetting.sensitive_key?("TWILIO_ACCOUNT_SID")
+  end
+
+  test "filters generic app setting secret values" do
+    filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered = filter.filter({ "app_setting" => { "key" => "TWILIO_AUTH_TOKEN", "value" => "secret-value" } })
+
+    assert_equal "[FILTERED]", filtered.dig("app_setting", "value")
+  end
 end

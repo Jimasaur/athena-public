@@ -65,7 +65,7 @@ Conversation
   "payload": {
     "ok": true,
     "approval_id": "athena-conversation-123-transcript",
-    "recipient": "jimmy@example.com",
+    "recipient": "jordan@example.com",
     "subject": "Athena call transcript"
   },
   "evidence": {
@@ -86,7 +86,7 @@ Conversation
   "created_by": "agent_tool",
   "approval_required": true,
   "recipient": {
-    "email": "jimmy@example.com"
+    "email": "jordan@example.com"
   },
   "content": {
     "subject": "Follow-up",

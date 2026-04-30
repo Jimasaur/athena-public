@@ -12,7 +12,7 @@ Athena is the control plane for Athena, the live OpenAI Realtime phone assistant
 
 ## Current Athena Path
 
-- Repo path: `/home/jimasaur/Athena`
+- Repo path: `/path/to/athena`
 - Local app URL: `http://127.0.0.1:3001`
 - Public URL: configure `PUBLIC_BASE_URL` for the active tunnel or deployment
 - Twilio routes calls into Athena
@@ -56,7 +56,7 @@ Athena is the control plane for Athena, the live OpenAI Realtime phone assistant
 Check Athena settings:
 
 ```bash
-cd /home/jimasaur/Athena
+cd /path/to/athena
 bin/rails runner 'puts %w[PUBLIC_BASE_URL OPENAI_REALTIME_MODEL OPENAI_REALTIME_VOICE ATHENA_TOOL_SECRET ATHENA_APPROVAL_TARGET].map { |k| "#{k}=#{AppSetting.find_by(key: k)&.value}" }'
 ```
 
@@ -70,7 +70,7 @@ script/smoke_twilio_voice
 Restart Athena locally:
 
 ```bash
-cd /home/jimasaur/Athena
+cd /path/to/athena
 rm -f tmp/pids/server.pid
 PUBLIC_BASE_URL=https://YOUR_PUBLIC_BASE_URL PORT=3001 bin/rails server -b 0.0.0.0 -p 3001
 ```

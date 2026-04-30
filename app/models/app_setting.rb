@@ -1,5 +1,17 @@
 class AppSetting < ApplicationRecord
   KEY_FORMAT = /\A[A-Z0-9_]+\z/
+  SENSITIVE_KEY_PATTERN = /
+    PASSWORD|
+    SECRET|
+    TOKEN|
+    API_KEY|
+    BEARER|
+    PRIVATE_KEY|
+    CLIENT_SECRET|
+    SIGNING_SECRET|
+    WEBHOOK_URL|
+    CREDENTIALS?
+  /x
 
   validates :key, presence: true, uniqueness: true, format: { with: KEY_FORMAT }
 
@@ -29,6 +41,14 @@ class AppSetting < ApplicationRecord
 
   def self.normalize_key(key)
     key.to_s.strip.upcase
+  end
+
+  def self.sensitive_key?(key)
+    normalize_key(key).match?(SENSITIVE_KEY_PATTERN)
+  end
+
+  def sensitive?
+    self.class.sensitive_key?(key)
   end
 
   private

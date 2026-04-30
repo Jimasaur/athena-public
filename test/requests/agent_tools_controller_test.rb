@@ -143,6 +143,38 @@ class AgentToolsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "strict tools require verified call context for scoped commands" do
+    AppSetting.create!(key: "ATHENA_PUBLIC_DEMO_MODE", value: "true")
+    AppSetting.create!(key: "ATHENA_TOOL_SECRET", value: "tool-secret")
+
+    post agent_tools_command_path,
+      params: { command: "summarize_last_call" },
+      headers: { "X-Athena-Tool-Secret" => "tool-secret" }
+
+    assert_response :forbidden
+  end
+
+  test "strict tools accept signed call context and stay scoped to that conversation" do
+    AppSetting.create!(key: "ATHENA_PUBLIC_DEMO_MODE", value: "true")
+    AppSetting.create!(key: "ATHENA_TOOL_SECRET", value: "tool-secret")
+    conversation = conversations(:one)
+    other = conversations(:two)
+    other.update!(summary: "This summary should not leak.")
+    conversation.messages.create!(role: "user", content: "Scoped request", sent_at: Time.current)
+    token = AgentToolContext.token_for(conversation: conversation, call_sid: conversation.twilio_call_sid)
+
+    post agent_tools_command_path,
+      params: { command: "summarize_last_call", conversation_id: other.id, call_sid: other.twilio_call_sid },
+      headers: {
+        "X-Athena-Tool-Secret" => "tool-secret",
+        AgentToolContext::HEADER => token
+      }
+
+    assert_response :success
+    assert_equal conversation.id, response.parsed_body.dig("call", "id")
+    assert_not_includes response.body, "This summary should not leak."
+  end
+
   test "dispatcher routes status command" do
     post agent_tools_command_path, params: { command: "status" }
 
@@ -282,7 +314,7 @@ class AgentToolsControllerTest < ActionDispatch::IntegrationTest
         assert_enqueued_with(job: GemmaMailApprovalJob) do
           post agent_tools_command_path, params: {
             command: "semantic_request",
-            request: "Send an email to operator@example.com with subject \"Test subject\" and body \"Test body\"."
+            request: "Send an email to demo@example.com with subject \"Test subject\" and body \"Test body\"."
           }
         end
       end
@@ -292,14 +324,14 @@ class AgentToolsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "gmail_send", response.parsed_body["command"]
     assert_equal "gmail_approval_requested", response.parsed_body["action"]
     assert_equal "approval", response.parsed_body["mode"]
-    assert_equal "operator@example.com", response.parsed_body["recipient"]
+    assert_equal "demo@example.com", response.parsed_body["recipient"]
     assert_equal "Test subject", response.parsed_body["subject"]
     assert_includes response.parsed_body["reply"], "Discord approval"
   end
 
   test "email approval handoff defaults recipient from conversation customer email" do
     customer = customers(:one)
-    customer.update!(metadata: customer.metadata.merge("email" => "operator@example.com"))
+    customer.update!(metadata: customer.metadata.merge("email" => "demo@example.com"))
     conversation = customer.conversations.create!(
       channel: "voice",
       status: "in_progress",
@@ -319,10 +351,10 @@ class AgentToolsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "gmail_send", response.parsed_body["command"]
-    assert_equal "operator@example.com", response.parsed_body["recipient"]
+    assert_equal "demo@example.com", response.parsed_body["recipient"]
 
     event = conversation.sidecar_events.where(kind: "email_approval.queued").order(:created_at).last
-    assert_equal "operator@example.com", event.payload["recipient"]
+    assert_equal "demo@example.com", event.payload["recipient"]
   end
 
   test "Gemma Mail approval job records Discord handoff result" do

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import consumer from "channels/consumer"
 export default class extends Controller {
   static targets = ["toggle", "current", "duration", "progress", "icon", "waveform"]
-  static values = { conversationId: Number }
+  static values = { conversationId: Number, token: String }
 
   connect() {
     this.audioContext = null
@@ -40,11 +40,13 @@ export default class extends Controller {
     if (this.subscription) return
     if (!this.isEnabled) return
     if (!this.hasConversationIdValue) return
+    if (!this.hasTokenValue || !this.tokenValue) return
 
     this.subscription = consumer.subscriptions.create(
       {
         channel: "CallAudioChannel",
-        conversation_id: this.conversationIdValue
+        conversation_id: this.conversationIdValue,
+        token: this.tokenValue
       },
       {
         received: (data) => this.handleAudio(data)

@@ -52,6 +52,7 @@ class GemmaMailApprovalJob < ApplicationJob
         category: payload[:category],
         approval_channel: payload[:approval_channel],
         approval_target: payload[:approval_target],
+        discord_approval_message_id: result[:reply].presence,
         approval_delivery_attempt: payload[:approval_delivery_attempt],
         result: result.slice(:ok, :agent, :session_id, :channel, :reply_to, :mode, :action, :delivery_status, :reply, :error)
       }.compact,

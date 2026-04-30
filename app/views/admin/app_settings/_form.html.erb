@@ -18,8 +18,13 @@
 
   <div>
     <%= form.label :value, class: "text-sm font-medium text-slate-700" %>
-    <%= form.text_area :value, rows: 4, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
-    <p class="mt-1 text-xs text-slate-500">Database values take precedence over the .env fallback when present.</p>
+    <% if @app_setting.sensitive? %>
+      <%= form.password_field :value, value: "", placeholder: app_setting_value_placeholder(@app_setting), autocomplete: "new-password", class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+      <p class="mt-1 text-xs text-slate-500">Stored secrets are hidden. Leave blank to keep the current value.</p>
+    <% else %>
+      <%= form.text_area :value, rows: 4, class: "mt-2 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 shadow-sm focus:border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-100" %>
+      <p class="mt-1 text-xs text-slate-500">Database values take precedence over the .env fallback when present.</p>
+    <% end %>
   </div>
 
   <div class="flex items-center gap-3">

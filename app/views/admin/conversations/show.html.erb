@@ -64,7 +64,7 @@
 <div class="grid gap-6 lg:grid-cols-3">
   <section class="lg:col-span-2 space-y-6">
     <% if @conversation.status == "in_progress" %>
-      <section class="brand-panel rounded-sm p-6" data-controller="live-audio" data-live-audio-conversation-id-value="<%= @conversation.id %>">
+      <section class="brand-panel rounded-sm p-6" data-controller="live-audio" data-live-audio-conversation-id-value="<%= @conversation.id %>" data-live-audio-token-value="<%= @live_audio_token %>">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-sm font-semibold text-[#182023]">Live stream</h2>

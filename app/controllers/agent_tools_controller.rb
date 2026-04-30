@@ -1,10 +1,42 @@
+require "digest"
+
 class AgentToolsController < ApplicationController
+  CALL_SCOPED_COMMANDS = %w[
+    lookup
+    update
+    find_contact
+    summarize_last_call
+    capture_idea
+    draft_follow_up
+    gmail_send
+    email
+    email_draft
+    athena_call_summary
+  ].freeze
+  REALTIME_ALLOWED_COMMANDS = %w[
+    semantic_request
+    status
+    web_search
+    capture_idea
+    find_contact
+    summarize_last_call
+    email
+  ].freeze
+  EXPENSIVE_COMMANDS = %w[openclaw_chat draft_follow_up gmail_send email email_draft].freeze
+  WRITE_COMMANDS = %w[capture_idea update gmail_send email email_draft].freeze
+
   skip_before_action :verify_authenticity_token
   before_action :verify_tool_secret!
+  before_action :enforce_agent_tool_rate_limit!
 
   def lookup
-    phone_number = params[:phone_number] || params[:phone]
-    customer = CustomerLookupService.new(phone_number: phone_number).call
+    customer =
+      if scoped_tools_strict?
+        scoped_conversation&.customer
+      else
+        phone_number = params[:phone_number] || params[:phone]
+        CustomerLookupService.new(phone_number: phone_number).call
+      end
 
     if customer
       render json: {
@@ -68,6 +100,10 @@ class AgentToolsController < ApplicationController
   def command
     command_name = params[:command].to_s.strip
     return render json: { ok: false, error: "Command is required" }, status: :unprocessable_entity if command_name.blank?
+    if realtime_tool_call? && !REALTIME_ALLOWED_COMMANDS.include?(command_name)
+      return render json: { ok: false, error: "Command is not available to Realtime calls." }, status: :forbidden
+    end
+    return if scoped_command_blocked?(command_name)
 
     case command_name
     when "status"
@@ -150,7 +186,7 @@ class AgentToolsController < ApplicationController
   end
 
   def athena_call_summary
-    conversation = find_conversation
+    conversation = scoped_conversation
     return render json: { ok: false, error: "Call not found" }, status: :not_found unless conversation
 
     render json: {
@@ -194,6 +230,11 @@ class AgentToolsController < ApplicationController
   private
 
   def find_customer
+    if scoped_tools_strict?
+      conversation = scoped_conversation
+      return conversation&.customer
+    end
+
     if params[:customer_id].present?
       Customer.find_by(id: params[:customer_id])
     else
@@ -212,7 +253,12 @@ class AgentToolsController < ApplicationController
   end
 
   def find_conversation
-    return Conversation.includes(:customer, :messages).find_by(id: params[:conversation_id]) if params[:conversation_id].present?
+    if params[:conversation_id].present?
+      conversation = Conversation.includes(:customer, :messages).find_by(id: params[:conversation_id])
+      return nil if conversation && params[:call_sid].present? && conversation.twilio_call_sid != params[:call_sid]
+
+      return conversation
+    end
     return Conversation.includes(:customer, :messages).find_by(twilio_call_sid: params[:call_sid]) if params[:call_sid].present?
 
     nil
@@ -387,12 +433,17 @@ class AgentToolsController < ApplicationController
   def find_contact_response_for(query)
     return { status: :unprocessable_entity, body: { ok: false, error: "Query is required" } } if query.blank?
 
-    scope = Customer.all
-    digits = query.gsub(/\D/, "")
-    scope = scope.where(phone_number: [ query, digits, "+#{digits}" ].compact.uniq) if digits.present?
-    scope = scope.where("LOWER(name) LIKE ?", "%#{query.downcase}%") if query.match?(/[[:alpha:]]/)
-
-    contacts = scope.order(created_at: :desc).limit(5)
+    contacts =
+      if scoped_tools_strict?
+        customer = scoped_conversation&.customer
+        customer && contact_matches_query?(customer, query) ? [ customer ] : []
+      else
+        scope = Customer.all
+        digits = query.gsub(/\D/, "")
+        scope = scope.where(phone_number: [ query, digits, "+#{digits}" ].compact.uniq) if digits.present?
+        scope = scope.where("LOWER(name) LIKE ?", "%#{query.downcase}%") if query.match?(/[[:alpha:]]/)
+        scope.order(created_at: :desc).limit(5)
+      end
     {
       status: :ok,
       body: {
@@ -406,8 +457,7 @@ class AgentToolsController < ApplicationController
   end
 
   def capture_idea_result(extra_payload = {})
-    conversation = find_conversation ||
-      Conversation.includes(:customer, :messages).order(created_at: :desc).first
+    conversation = scoped_conversation_or_legacy
     return { ok: false, command: "capture_idea", error: "Conversation is required.", status: 422 } unless conversation
 
     AthenaIdeaCaptureService.new(
@@ -437,7 +487,9 @@ class AgentToolsController < ApplicationController
 
   def gmail_send_result(extra_payload = {})
     payload = params.to_unsafe_h.except("controller", "action").merge(extra_payload)
-    return gemma_mail_approval_handoff_result(payload) if approval_handoff_requested?(payload)
+    if scoped_tools_strict? || approval_handoff_requested?(payload)
+      return gemma_mail_approval_handoff_result(payload.merge("mode" => "approval", "approval_workflow" => true))
+    end
 
     if AppSetting.fetch("GMAIL_TOOL_URL").to_s.strip.present?
       return ConfiguredJsonWebhookToolService.new(
@@ -457,8 +509,7 @@ class AgentToolsController < ApplicationController
 
   def gemma_mail_approval_handoff_result(extra_payload = {})
     payload = params.to_unsafe_h.except("controller", "action").merge(extra_payload)
-    conversation = find_conversation ||
-      Conversation.includes(:customer, :messages).order(created_at: :desc).first
+    conversation = scoped_conversation_or_legacy
 
     GemmaMailApprovalHandoffService.new(
       conversation: conversation,
@@ -467,8 +518,7 @@ class AgentToolsController < ApplicationController
   end
 
   def summarize_last_call_result
-    conversation = find_conversation ||
-      Conversation.includes(:customer, :messages, :call_events).order(created_at: :desc).first
+    conversation = scoped_conversation_or_legacy(include_call_events: true)
     return { ok: false, command: "summarize_last_call", error: "No calls found" } unless conversation
 
     recent_messages = conversation.messages.order(:sent_at, :created_at).last(8).map do |message|
@@ -510,8 +560,7 @@ class AgentToolsController < ApplicationController
     return { ok: false, error: "Email recipient is required.", status: 422 } if to.blank?
     return { ok: false, error: "Email body is required.", status: 422 } if body.blank?
 
-    conversation = find_conversation ||
-      Conversation.includes(:customer, :messages).order(created_at: :desc).first
+    conversation = scoped_conversation_or_legacy
     return { ok: false, error: "Conversation is required to create an email draft.", status: 422 } unless conversation
 
     call_state = CallState.ensure_for_conversation(
@@ -682,6 +731,106 @@ class AgentToolsController < ApplicationController
     PROMPT
   end
 
+  def scoped_command_blocked?(command_name)
+    return false unless scoped_tools_strict?
+    return false unless CALL_SCOPED_COMMANDS.include?(command_name)
+    return false if scoped_conversation.present?
+
+    render json: { ok: false, error: "Verified call context is required for #{command_name}." }, status: :forbidden
+    true
+  end
+
+  def scoped_conversation_or_legacy(include_call_events: false)
+    conversation = scoped_conversation
+    return conversation if conversation
+    return nil if scoped_tools_strict?
+
+    scope = Conversation.includes(:customer, :messages)
+    scope = scope.includes(:call_events) if include_call_events
+    scope.order(created_at: :desc).first
+  end
+
+  def scoped_conversation
+    return @scoped_conversation if defined?(@scoped_conversation)
+
+    @scoped_conversation = verified_tool_context_conversation || fallback_tool_conversation
+  end
+
+  def verified_tool_context_conversation
+    payload = AgentToolContext.verify(request.headers[AgentToolContext::HEADER])
+    return if payload.blank?
+
+    conversation = Conversation.includes(:customer, :messages).find_by(id: payload[:conversation_id])
+    return unless conversation
+    return if payload[:call_sid].present? && conversation.twilio_call_sid != payload[:call_sid]
+
+    conversation
+  end
+
+  def fallback_tool_conversation
+    return nil if scoped_tools_strict?
+
+    find_conversation
+  end
+
+  def scoped_tools_strict?
+    Rails.env.production? ||
+      public_surface_configured? ||
+      truthy_setting?("ATHENA_PUBLIC_DEMO_MODE") ||
+      truthy_setting?("ATHENA_AGENT_TOOLS_REQUIRE_CONTEXT")
+  end
+
+  def realtime_tool_call?
+    request.headers[AgentToolContext::HEADER].present?
+  end
+
+  def contact_matches_query?(customer, query)
+    normalized_query = query.to_s.downcase
+    digits = query.to_s.gsub(/\D/, "")
+    phone_digits = customer.phone_number.to_s.gsub(/\D/, "")
+
+    customer.name.to_s.downcase.include?(normalized_query) ||
+      customer.phone_number.to_s == query.to_s ||
+      (digits.present? && phone_digits.end_with?(digits))
+  end
+
+  def enforce_agent_tool_rate_limit!
+    command_name = params[:command].presence || action_name
+    limit, window = rate_limit_for(command_name)
+    bucket = rate_limit_bucket(command_name)
+    key = "athena:agent_tools:rate:#{bucket}:#{command_name}:#{window.to_i}:#{Time.current.to_i / window.to_i}"
+    count = Rails.cache.increment(key, 1, expires_in: window)
+    unless count
+      Rails.cache.write(key, 1, expires_in: window)
+      count = 1
+    end
+    return if count <= limit
+
+    render json: {
+      ok: false,
+      error: "Rate limit exceeded. Please wait and try again.",
+      retry_after_seconds: window.to_i
+    }, status: :too_many_requests
+  end
+
+  def rate_limit_for(command_name)
+    command_name = command_name.to_s
+    return [ 4, 1.minute ] if EXPENSIVE_COMMANDS.include?(command_name)
+    return [ 6, 1.minute ] if WRITE_COMMANDS.include?(command_name)
+    return [ 6, 1.minute ] if command_name == "web_search"
+
+    [ 120, 1.minute ]
+  end
+
+  def rate_limit_bucket(command_name)
+    conversation = scoped_conversation if CALL_SCOPED_COMMANDS.include?(command_name.to_s)
+    return "call:#{conversation.id}" if conversation
+
+    provided_secret = request.headers["X-Athena-Tool-Secret"].to_s
+    fingerprint_source = provided_secret.presence || request.remote_ip.to_s
+    Digest::SHA256.hexdigest(fingerprint_source)[0, 24]
+  end
+
   def verify_tool_secret!
     secret = tool_secret
     return if secret.blank? && !tool_secret_required?
@@ -701,8 +850,16 @@ class AgentToolsController < ApplicationController
 
   def tool_secret_required?
     Rails.env.production? ||
+      public_surface_configured? ||
       truthy_setting?("ATHENA_PUBLIC_DEMO_MODE") ||
       truthy_setting?("ATHENA_TOOL_SECRET_REQUIRED")
+  end
+
+  def public_surface_configured?
+    return false if Rails.env.test?
+
+    AppSetting.fetch("PUBLIC_BASE_URL").to_s.strip.present? ||
+      ENV["PUBLIC_BASE_URL"].to_s.strip.present?
   end
 
   def truthy_setting?(key)

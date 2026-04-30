@@ -118,8 +118,11 @@ Before production:
 
 - set `ADMIN_USERNAME` and `ADMIN_PASSWORD`
 - set `ATHENA_TOOL_SECRET`
+- set `PUBLIC_BASE_URL` for tunneled/public demos so Rails treats the app as public-facing even in development
 - set `ATHENA_PUBLIC_DEMO_MODE=true` for public demos that still use the development database
-- set `ADMIN_AUTH_REQUIRED=true` and `ATHENA_TOOL_SECRET_REQUIRED=true` if you want fail-closed auth outside demo mode
+- set `ADMIN_AUTH_REQUIRED=true` and `ATHENA_TOOL_SECRET_REQUIRED=true` if you want fail-closed auth even before a public URL is configured
+- set `ATHENA_APPROVAL_DISCORD_APPROVER_IDS` to immutable Discord user IDs before enabling email approvals
+- keep `ATHENA_OUTBOUND_LOCAL_URL_ALLOWLIST` empty unless a deliberate local sidecar origin must receive connector callbacks
 - enable `TWILIO_VERIFY_WEBHOOK_SIGNATURES`
 - keep Rails bound to `127.0.0.1` when exposed through the AWS reverse tunnel
 - require the per-call `stream_token` generated in TwiML before accepting Twilio Media Stream audio

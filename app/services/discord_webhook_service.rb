@@ -10,7 +10,10 @@ class DiscordWebhookService
   def post(content:, embeds: nil)
     return { ok: false, error: "Discord webhook URL is missing." } if @url.blank?
 
-    uri = URI(@url)
+    policy = OutboundUrlPolicy.external(@url, require_discord: true)
+    return { ok: false, error: policy.error, status: 422 } unless policy.ok?
+
+    uri = policy.uri
     request = Net::HTTP::Post.new(uri)
     request["Content-Type"] = "application/json"
     request.body = JSON.generate(
@@ -21,8 +24,7 @@ class DiscordWebhookService
       }.compact
     )
 
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = uri.scheme == "https"
+    http = OutboundUrlPolicy.prepare_http(uri, policy.ipaddr)
     http.open_timeout = 5
     http.read_timeout = 10
     response = http.request(request)

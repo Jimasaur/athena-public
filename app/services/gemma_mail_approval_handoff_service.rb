@@ -1,3 +1,5 @@
+require "securerandom"
+
 class GemmaMailApprovalHandoffService
   def initialize(conversation:, payload:)
     @conversation = conversation
@@ -100,7 +102,7 @@ class GemmaMailApprovalHandoffService
   end
 
   def approval_id
-    @payload[:approval_id].presence || "athena-conversation-#{@conversation.id}"
+    @payload[:approval_id].presence || "athena-conversation-#{@conversation.id}-mail-#{SecureRandom.hex(4)}"
   end
 
   def extract_email(text)

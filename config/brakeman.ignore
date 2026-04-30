@@ -1,8 +1,3 @@
 {
-  "ignored_warnings": [
-    {
-      "fingerprint": "5ad9346796bc259100c40dd5eaebb1f1590822319b8a53a9bf45084a2f6b22e5",
-      "note": "Reviewed 2026-04-28. Connector URLs are operator-configured outbound HTTP(S) endpoints; connector_uri validates URI::HTTP and host before Net::HTTP uses them. Brakeman classifies configurable Net::HTTP host values as FileAccess."
-    }
-  ]
+  "ignored_warnings": []
 }

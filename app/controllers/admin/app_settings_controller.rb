@@ -142,7 +142,7 @@ module Admin
     def edit; end
 
     def update
-      if @app_setting.update(app_setting_params)
+      if @app_setting.update(normalized_app_setting_params)
         redirect_to admin_app_settings_path, notice: "Config variable updated."
       else
         redirect_to admin_app_settings_path, alert: @app_setting.errors.full_messages.to_sentence
@@ -181,6 +181,17 @@ module Admin
 
     def app_setting_params
       params.require(:app_setting).permit(:key, :value)
+    end
+
+    def normalized_app_setting_params
+      attributes = app_setting_params.to_h
+      incoming_key = attributes["key"].presence || @app_setting.key
+      if attributes.key?("value") &&
+          attributes["value"].blank? &&
+          (@app_setting.sensitive? || AppSetting.sensitive_key?(incoming_key))
+        attributes.delete("value")
+      end
+      attributes
     end
 
     def realtime_settings

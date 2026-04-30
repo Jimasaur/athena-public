@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-deny_regex='athena[.]jimmys[.]tools|jimmys[.]tools|gopherdrones[.]com|1498772020043845755|12185147882|218-514-7882|13[.]58[.]144[.]158|98[.]61[.]78[.]253|Grumpy|DGX'
-secret_regex='sk-[A-Za-z0-9_-]{20,}|xox[baprs]-|gh[pousr]_[A-Za-z0-9_]{20,}|AC[0-9a-fA-F]{32}|SK[0-9a-fA-F]{32}|SG[.][A-Za-z0-9_-]+[.][A-Za-z0-9_-]+|BEGIN (RSA|OPENSSH|EC|PRIVATE) KEY'
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+
+default_deny_regex='/home/[[:alnum:]_.-]+/(Athena|jim_dev|[.]ssh)'
+deny_regex="${PUBLIC_READINESS_DENY_REGEX:-$default_deny_regex}"
+local_deny_file="$repo_root/.public-readiness-denylist.local"
+if [[ -f "$local_deny_file" ]]; then
+  local_terms="$(grep -Ev '^[[:space:]]*(#|$)' "$local_deny_file" | sed -E 's/[][(){}.^$*+?|\\]/\\&/g' | paste -sd '|' -)"
+  if [[ -n "$local_terms" ]]; then
+    deny_regex="$deny_regex|$local_terms"
+  fi
+fi
+
+secret_regex='sk-[A-Za-z0-9_-]{20,}|xox[baprs]-|gh[pousr]_[A-Za-z0-9_]{20,}|AC[0-9a-fA-F]{32}|CA[0-9a-fA-F]{32}|SK[0-9a-fA-F]{32}|SG[.][A-Za-z0-9_-]+[.][A-Za-z0-9_-]+|BEGIN (RSA|OPENSSH|EC|PRIVATE) KEY'
 
 deny_matches="$(git grep -n -I -E "$deny_regex" -- . ':(exclude)script/public_readiness_check' || true)"
 secret_matches="$(git grep -n -I -E "$secret_regex" -- . ':(exclude)script/public_readiness_check' || true)"

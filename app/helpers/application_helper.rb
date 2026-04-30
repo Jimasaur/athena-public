@@ -24,4 +24,25 @@ module ApplicationHelper
       aria: { hidden: "true" }
     )
   end
+
+  def app_setting_display_value(app_setting)
+    return "Not set" if app_setting.value.blank?
+    return "Stored secret" if app_setting.sensitive?
+
+    app_setting.value
+  end
+
+  def app_setting_form_value(app_setting)
+    app_setting.sensitive? ? "" : app_setting.value
+  end
+
+  def app_setting_value_field_type(app_setting)
+    app_setting.sensitive? ? "password" : "text"
+  end
+
+  def app_setting_value_placeholder(app_setting)
+    return "Stored; enter replacement" if app_setting.sensitive? && app_setting.value.present?
+
+    "Not set"
+  end
 end

@@ -29,7 +29,7 @@ module Admin
       assert_equal "test-api-key", AppSetting.find_by(key: "ATHENA_TOOL_SECRET").value
     end
 
-    test "update edits an existing config variable" do
+  test "update edits an existing config variable" do
       app_setting = app_settings(:public_base_url)
 
       patch admin_app_setting_path(app_setting), params: {
@@ -39,8 +39,45 @@ module Admin
       }
 
       assert_redirected_to admin_app_settings_path
-      assert_equal "https://updated.example.test", app_setting.reload.value
-    end
+    assert_equal "https://updated.example.test", app_setting.reload.value
+  end
+
+  test "index masks sensitive values" do
+    AppSetting.create!(key: "ATHENA_TOOL_SECRET", value: "super-secret-tool-value")
+
+    get admin_app_settings_path
+
+    assert_response :success
+    assert_includes @response.body, "Stored secret"
+    assert_not_includes @response.body, "super-secret-tool-value"
+    assert_not_includes @response.body, "fixture_auth_token"
+  end
+
+  test "blank sensitive update preserves existing value" do
+    app_setting = app_settings(:twilio_auth_token)
+
+    patch admin_app_setting_path(app_setting), params: {
+      app_setting: {
+        value: ""
+      }
+    }
+
+    assert_redirected_to admin_app_settings_path
+    assert_equal "fixture_auth_token", app_setting.reload.value
+  end
+
+  test "blank non-sensitive update clears existing value" do
+    app_setting = app_settings(:public_base_url)
+
+    patch admin_app_setting_path(app_setting), params: {
+      app_setting: {
+        value: ""
+      }
+    }
+
+    assert_redirected_to admin_app_settings_path
+    assert_equal "", app_setting.reload.value
+  end
 
     test "destroy removes a config variable" do
       app_setting = app_settings(:twilio_auth_token)

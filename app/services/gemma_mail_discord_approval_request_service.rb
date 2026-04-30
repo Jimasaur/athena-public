@@ -64,7 +64,7 @@ class GemmaMailDiscordApprovalRequestService
 
   def approval_message
     <<~TEXT
-      Approval request for Jimmy:
+      Approval request for the operator:
 
       Email awaiting your approval:
       - **Approval ID:** #{approval_id}

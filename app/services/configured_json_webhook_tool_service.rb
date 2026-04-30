@@ -11,9 +11,11 @@ class ConfiguredJsonWebhookToolService
     url = AppSetting.fetch(@setting_key).to_s.strip
     return unavailable("Missing #{@setting_key}.", status: :service_unavailable) if url.blank?
 
-    uri = connector_uri(url)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = uri.scheme == "https"
+    policy = OutboundUrlPolicy.external(url)
+    return unavailable(policy.error, status: :unprocessable_entity) unless policy.ok?
+
+    uri = policy.uri
+    http = OutboundUrlPolicy.prepare_http(uri, policy.ipaddr)
     http.open_timeout = 5
     http.read_timeout = 15
 
@@ -38,22 +40,11 @@ class ConfiguredJsonWebhookToolService
       provider: @setting_key,
       response: payload
     }
-  rescue URI::InvalidURIError
-    unavailable("Invalid URL configured for #{@setting_key}.", status: :unprocessable_entity)
   rescue StandardError => error
     unavailable("Connector failed: #{error.message}", status: :bad_gateway)
   end
 
   private
-
-  def connector_uri(url)
-    uri = URI.parse(url)
-    unless uri.is_a?(URI::HTTP) && uri.host.present?
-      raise URI::InvalidURIError, "URL must be HTTP or HTTPS"
-    end
-
-    uri
-  end
 
   def parse_json(body)
     return {} if body.to_s.strip.blank?

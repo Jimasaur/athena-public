@@ -148,7 +148,7 @@ Wants=network-online.target
 Type=simple
 User=REPLACE_WITH_LOCAL_USER
 ExecStart=/usr/bin/ssh -N \
-  -i /home/REPLACE_WITH_LOCAL_USER/.ssh/athena_tunnel \
+  -i "$HOME/.ssh/athena_tunnel" \
   -o ServerAliveInterval=30 \
   -o ServerAliveCountMax=3 \
   -o ExitOnForwardFailure=yes \

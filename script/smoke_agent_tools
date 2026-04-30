@@ -11,13 +11,24 @@ customer = SmokeSupport.smoke_customer
 conversation = customer.conversations.create!(
   channel: "voice",
   status: "open",
-  agent_name: "Smoke Tools"
+  agent_name: "Smoke Tools",
+  twilio_call_sid: "SMOKE-TOOLS-#{SecureRandom.hex(4)}"
 )
 conversation.messages.create!(
   role: "assistant",
   content: "Hello from the smoke tools script.",
   sent_at: Time.current
 )
+tool_context_headers = headers.merge(
+  AgentToolContext::HEADER => AgentToolContext.token_for(
+    conversation: conversation,
+    call_sid: conversation.twilio_call_sid
+  ).to_s
+)
+tool_context_params = {
+  conversation_id: conversation.id,
+  call_sid: conversation.twilio_call_sid
+}
 
 report.check("status") do
   session.post "/agent_tools/status", headers: headers
@@ -35,7 +46,7 @@ report.check("command dispatcher") do
 end
 
 report.check("lookup") do
-  session.post "/agent_tools/lookup", params: { phone_number: customer.phone_number }, headers: headers
+  session.post "/agent_tools/lookup", params: { phone_number: customer.phone_number }.merge(tool_context_params), headers: tool_context_headers
   body = SmokeSupport.json_body(session)
   report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
   report.assert(body.dig("customer", "phone_number") == customer.phone_number, "expected smoke customer")
@@ -43,22 +54,22 @@ end
 
 report.check("update") do
   session.post "/agent_tools/update",
-    params: { customer_id: customer.id, metadata: { "smoke_checked_at" => Time.current.iso8601 } },
-    headers: headers
+    params: { customer_id: customer.id, metadata: { "smoke_checked_at" => Time.current.iso8601 } }.merge(tool_context_params),
+    headers: tool_context_headers
   body = SmokeSupport.json_body(session)
   report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
   report.assert(body["updated"] == true, "expected customer update")
 end
 
 report.check("find_contact") do
-  session.post "/agent_tools/find_contact", params: { query: customer.phone_number }, headers: headers
+  session.post "/agent_tools/find_contact", params: { query: customer.phone_number }.merge(tool_context_params), headers: tool_context_headers
   body = SmokeSupport.json_body(session)
   report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
   report.assert(body["found"] == true, "expected contact match")
 end
 
 report.check("summarize_last_call") do
-  session.post "/agent_tools/summarize_last_call", headers: headers
+  session.post "/agent_tools/summarize_last_call", params: tool_context_params, headers: tool_context_headers
   body = SmokeSupport.json_body(session)
   report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
   report.assert(body.dig("call", "id").present?, "expected recent call payload")
@@ -119,8 +130,8 @@ begin
 
   report.check("draft_follow_up") do
     session.post "/agent_tools/draft_follow_up",
-      params: { context: "Follow up after a smoke call.", customer_name: customer.name },
-      headers: headers
+      params: { context: "Follow up after a smoke call.", customer_name: customer.name }.merge(tool_context_params),
+      headers: tool_context_headers
     body = SmokeSupport.json_body(session)
     report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
     report.assert(body["command"] == "draft_follow_up", "expected draft command")
@@ -129,12 +140,12 @@ begin
 
   report.check("gmail_send gemma-mail fallback") do
     session.post "/agent_tools/gmail_send",
-      params: { to: "smoke@example.test", subject: "Smoke", context: "Draft a smoke-test email.", mode: "draft" },
-      headers: headers
+      params: { to: "smoke@example.test", subject: "Smoke", context: "Draft a smoke-test email.", mode: "draft" }.merge(tool_context_params),
+      headers: tool_context_headers
     body = SmokeSupport.json_body(session)
     report.assert(session.response.status == 200, "expected 200, got #{session.response.status}")
     report.assert(body["command"] == "gmail_send", "expected gmail command")
-    report.assert(body["reply"].present?, "expected gemma-mail reply")
+    report.assert(body["reply"].present? || body["delivery_status"] == "approval_requested", "expected gemma-mail reply or approval request")
   end
 ensure
   OpenClawAgentService.define_singleton_method(:new) do |*args, &block|
