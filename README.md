@@ -2,6 +2,17 @@
 
 Athena is a Rails control plane for OpenAI Realtime voice agents. Twilio brings calls in, OpenAI Realtime runs the live speech loop, and Athena keeps the durable record: transcripts, tool calls, sidecar state, approvals, and follow-up actions.
 
+## Project status
+
+Public development prototype and reference implementation. The repository demonstrates an integration architecture; it is not a production-readiness, security, or compliance certification. Use synthetic data for evaluation, and review authentication, permissions, retention, provider costs, and approval behavior before enabling live calls or external actions.
+
+## What to explore
+
+- **Integration design:** a Twilio call becomes a streaming OpenAI Realtime session with a shared tool dispatcher.
+- **Operational visibility:** Rails models and admin views retain conversations, tool activity, and action drafts.
+- **Human review:** sidecar and email-handoff workflows separate proposed actions from approval.
+- **Demo walkthrough:** start with [the adoption guide](docs/adoption_guide.md) and [demo scenarios](docs/demo_walkthrough.md).
+
 ## Fast Path
 
 For a safe local tour that does not send live SMS or email:
