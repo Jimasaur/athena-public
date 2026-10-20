@@ -88,5 +88,17 @@ module Admin
       assert_equal "executed", draft.reload.status
       assert_equal "Draft sent.", flash[:notice]
     end
+
+    test "execute clearly labels a simulated action" do
+      draft = action_drafts(:one)
+      draft.update!(external_side_effect: draft.external_side_effect.merge("dry_run" => true))
+      draft.approve!(approved_by: "operator")
+
+      post execute_admin_action_draft_path(draft)
+
+      assert_redirected_to admin_conversation_path(draft.conversation)
+      assert_equal "executed", draft.reload.status
+      assert_equal "Demo action completed. No message was sent.", flash[:notice]
+    end
   end
 end

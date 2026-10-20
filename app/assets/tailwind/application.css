@@ -50,6 +50,11 @@
   ::selection {
     background: rgba(200, 217, 74, 0.45);
   }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-teal);
+    outline-offset: 3px;
+  }
 }
 
 .prose {

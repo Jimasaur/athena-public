@@ -38,14 +38,19 @@ module Admin
     end
 
     def latest_conversation
-      Conversation.includes(:customer, :call_state, :action_drafts).order(created_at: :desc).first
+      real_conversations.order(created_at: :desc).first
     end
 
     def latest_live_conversation
-      Conversation.includes(:customer, :call_state, :action_drafts)
+      real_conversations
         .where(status: "in_progress")
         .order(created_at: :desc)
         .first
+    end
+
+    def real_conversations
+      Conversation.includes(:customer, :call_state, :action_drafts)
+        .where("twilio_call_sid IS NULL OR twilio_call_sid NOT LIKE ?", "DEMO-%")
     end
 
     def live_demo_status
@@ -57,7 +62,7 @@ module Admin
         tool_command_url: "#{base_url}#{agent_tools_command_path}",
         stream_url: websocket_url(base_url, "/ws/twilio-media"),
         phone_numbers: phone_numbers,
-        readiness: readiness_items,
+        readiness: IntegrationReadinessService.new.call,
         function_prompts: function_prompts
       }
     end
@@ -84,22 +89,6 @@ module Admin
           tools_count: Array(setting.tools).size
         }
       end
-    end
-
-    def readiness_items
-      [
-        readiness_item("Twilio voice credentials", AppSetting.fetch("TWILIO_ACCOUNT_SID").present? && AppSetting.fetch("TWILIO_AUTH_TOKEN").present?),
-        readiness_item("Callable Twilio number", AgentSetting.where.not(twilio_number: [ nil, "" ]).exists?),
-        readiness_item("OpenAI Realtime profile", AgentSetting.exists?),
-        readiness_item("Public webhook URL", AppSetting.fetch("PUBLIC_BASE_URL").present?, AppSetting.fetch("PUBLIC_BASE_URL")),
-        readiness_item("A2P campaign", AppSetting.fetch("TWILIO_A2P_CAMPAIGN_SID").present?, AppSetting.fetch("TWILIO_A2P_CAMPAIGN_SID").presence || "SMS can stay dry-run while vetting is pending"),
-        readiness_item("OpenAI API key", ENV["OPENAI_API_KEY"].present? || AppSetting.fetch("OPENAI_API_KEY").present?),
-        readiness_item("Local AI sidecar route", AppSetting.fetch("OPENCLAW_AGENT").present? || AppSetting.fetch("OPENCLAW_PROFILE").present?, [ AppSetting.fetch("OPENCLAW_AGENT"), AppSetting.fetch("OPENCLAW_PROFILE") ].compact_blank.join(" / "))
-      ]
-    end
-
-    def readiness_item(label, ready, detail = nil)
-      { label: label, ready: ready, detail: detail }
     end
 
     def function_prompts

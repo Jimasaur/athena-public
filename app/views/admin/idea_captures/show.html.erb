@@ -34,15 +34,31 @@
 
   <aside class="space-y-6">
     <section class="brand-panel rounded-sm p-5">
+      <h2 class="text-sm font-semibold text-[#182023]">Review this idea</h2>
+      <p class="mt-3 text-sm leading-6 text-[#66716d]">Mark ideas after checking the source conversation. Archiving keeps the record available in the library.</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <% unless ["reviewed", "archived"].include?(@idea_capture.status) %>
+          <%= button_to "Mark reviewed", review_admin_idea_capture_path(@idea_capture), method: :patch, class: "brand-primary-action rounded-sm border px-3 py-2 text-sm font-semibold" %>
+        <% end %>
+        <% if @idea_capture.status == "archived" %>
+          <%= button_to "Return to review", reopen_admin_idea_capture_path(@idea_capture), method: :patch, class: "brand-primary-action rounded-sm border px-3 py-2 text-sm font-semibold" %>
+        <% else %>
+          <%= button_to "Archive idea", archive_admin_idea_capture_path(@idea_capture), method: :patch, class: "rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#33413d] hover:bg-[#f0f3ed]" %>
+        <% end %>
+      </div>
+      <p class="mt-3 text-xs leading-5 text-[#66716d]">Library review does not approve or send follow-up actions.</p>
+    </section>
+
+    <section class="brand-panel rounded-sm p-5">
       <h2 class="text-sm font-semibold text-[#182023]">Metadata</h2>
       <dl class="mt-4 space-y-3 text-xs text-[#66716d]">
         <div class="flex justify-between gap-3">
           <dt>Status</dt>
-          <dd class="font-semibold text-[#33413d]"><%= @idea_capture.status %></dd>
+          <dd class="font-semibold text-[#33413d]"><%= @idea_capture.status.humanize %></dd>
         </div>
         <div class="flex justify-between gap-3">
           <dt>Department</dt>
-          <dd class="font-semibold text-[#33413d]"><%= @idea_capture.department.presence || "Revenue Cycle" %></dd>
+          <dd class="font-semibold text-[#33413d]"><%= @idea_capture.department.presence || "Not captured" %></dd>
         </div>
         <div class="flex justify-between gap-3">
           <dt>Captured</dt>
@@ -63,8 +79,13 @@
     <h2 class="text-lg font-semibold text-[#182023]">Transcript Evidence</h2>
   </div>
   <div class="space-y-3 p-6">
-    <% Array(@idea_capture.payload.to_h["transcript"]).each do |line| %>
-      <p class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-4 py-3 text-sm leading-6 text-[#4f5d58]"><%= line %></p>
+    <% transcript_lines = Array(@idea_capture.payload.to_h["transcript"]).compact_blank %>
+    <% if transcript_lines.any? %>
+      <% transcript_lines.each do |line| %>
+        <p class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-4 py-3 text-sm leading-6 text-[#4f5d58]"><%= line %></p>
+      <% end %>
+    <% else %>
+      <p class="text-sm leading-6 text-[#66716d]">No transcript excerpt is attached to this card. Open the conversation to check its source context.</p>
     <% end %>
   </div>
 </section>

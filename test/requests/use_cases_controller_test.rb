@@ -15,7 +15,9 @@ class UseCasesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", text: /retreat-ready revenue cycle ideas/
-    assert_select "h2", text: "Core actions"
+    assert_select "h2", text: "Workflow goals"
+    assert_includes response.body, "Available in this prototype:"
+    assert_includes response.body, "Planned:"
     assert_select "h2", text: "Real workflows to design around."
     assert_select "h3", text: "Rough Idea Capture"
     assert_select "code", text: "idea_capture"

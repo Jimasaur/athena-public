@@ -2,6 +2,8 @@
 
 Athena is a Rails control plane for OpenAI Realtime voice agents. Twilio brings calls in, OpenAI Realtime runs the live speech loop, and Athena keeps the durable record: transcripts, tool calls, sidecar state, approvals, and follow-up actions.
 
+**From a conversation to a reviewable next step.** The reference workflow captures improvement ideas, links them to their source conversation, and gives operators a searchable review library with CSV export. Start with the local synthetic demo before connecting a phone number.
+
 ## Project status
 
 Public development prototype and reference implementation. The repository demonstrates an integration architecture; it is not a production-readiness, security, or compliance certification. Use synthetic data for evaluation, and review authentication, permissions, retention, provider costs, and approval behavior before enabling live calls or external actions.
@@ -15,9 +17,13 @@ Public development prototype and reference implementation. The repository demons
 
 ## Fast Path
 
-For a safe local tour that does not send live SMS or email:
+Prerequisites: Ruby **3.4.7**, Bundler **4.0.2**, Git, and SQLite development libraries/native build tools if your platform needs to compile gems. `bin/dev` and the smoke scripts use a POSIX shell; use Linux, macOS, or WSL for the documented shell workflow. Node.js is not required for this importmap/Tailwind Rails app.
+
+Clone the public reference repository, then prepare a local tour:
 
 ```bash
+git clone https://github.com/Jimasaur/athena-public.git
+cd athena-public
 cp .env.example .env
 bin/setup --skip-server
 bin/doctor
@@ -31,11 +37,24 @@ Then open:
 - `http://127.0.0.1:3000/admin/demo_scenarios`
 - `http://127.0.0.1:3000/use-cases`
 
-To use port 3001:
+The example uses port **3000** and leaves `PUBLIC_BASE_URL` blank so the local console can open without public deployment credentials. `bin/dev` loads `.env`; the Rails console and standalone scripts use their process environment and database settings. To use another port:
 
 ```bash
 PORT=3001 bin/dev
 ```
+
+Seeded scenario actions are dry runs. Keep provider credentials blank for the initial tour and use synthetic data. The readiness panels describe configuration, not live provider health.
+
+Development binds to `127.0.0.1`. `bin/dev` starts the web and CSS processes; start `script/watch_gemma_mail_approvals` separately only when intentionally evaluating configured live approvals.
+
+## Review an idea
+
+1. Open **Demos** and launch a synthetic scenario.
+2. Open **Ideas**, search the captured content, and filter by category or review status.
+3. Inspect the source conversation, mark the idea reviewed, archive it, or reopen it.
+4. Export the matching library as CSV for workshop preparation. Exports include impact hypotheses and source conversation IDs; spreadsheet formula prefixes are escaped.
+
+Review and archive actions are recorded in the conversation timeline. They do not execute follow-up drafts or contact external services.
 
 ## Live Voice Path
 
@@ -72,18 +91,22 @@ OPENAI_API_KEY=your_openai_key
 OPENAI_REALTIME_MODEL=gpt-realtime-1.5
 OPENAI_REALTIME_VOICE=marin
 OPENAI_REALTIME_INTERRUPT_RESPONSE=false
+ADMIN_USERNAME=your_admin_username
+ADMIN_PASSWORD=your_unique_admin_password
+ATHENA_TOOL_SECRET=your_unique_tool_secret
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 PUBLIC_BASE_URL=https://YOUR_PUBLIC_BASE_URL
-ATHENA_INTERNAL_BASE_URL=http://127.0.0.1:3001
+ATHENA_INTERNAL_BASE_URL=http://127.0.0.1:3000
 ```
+
+Set admin and tool credentials before setting the public origin. A configured public surface fails closed when these credentials are missing.
 
 OpenAI Realtime voice, transcription, noise reduction, turn detection, and advanced session overrides are available in `/admin/app_settings`.
 
 Useful tool and sidecar configuration:
 
 ```bash
-ATHENA_TOOL_SECRET=shared_tool_secret
 BRAVE_SEARCH_API_KEY=your_brave_search_key
 OPENCLAW_CLI=openclaw
 OPENCLAW_PROFILE=default
@@ -126,6 +149,9 @@ External side effects should stay approval-gated. Athena can request an email, G
 
 ## Docs Map
 
+- `docs/operations.md` - local setup, runtime configuration, storage, and deployment checks.
+- `CONTRIBUTING.md` - development workflow and validation.
+- `CHANGELOG.md` - user-visible changes.
 - `docs/adoption_guide.md` - start here when exploring Athena cold.
 - `docs/stack_overview.md` - super high-level map of what the stack is and why it exists.
 - `docs/architecture.md` - system map, main objects, request surfaces, and sidecar flow.
@@ -161,3 +187,4 @@ bin/doctor
 - Admin UI uses HTTP basic auth when configured. In `ATHENA_PUBLIC_DEMO_MODE` or production, missing admin/tool secrets fail closed.
 - Data is stored in SQLite for development.
 - Live voice calls use Twilio Media Streams plus OpenAI Realtime.
+- This repository does not yet include a license. The owner needs to select one before the project is presented as an open-source package.

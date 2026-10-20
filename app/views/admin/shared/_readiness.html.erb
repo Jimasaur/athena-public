@@ -1,0 +1,28 @@
+<div class="border-b border-[#dfe5dc] px-6 py-4">
+  <h2 class="text-lg font-semibold text-[#182023]">Readiness</h2>
+  <p class="mt-1 text-xs leading-5 text-[#66716d]">Configuration inventory only. No network probes are run; configured settings do not confirm provider access, delivery, or production readiness.</p>
+</div>
+<div class="border-b border-[#dfe5dc] bg-[#eef7f4] px-6 py-4">
+  <p class="text-sm font-semibold text-[#0d4f4a]"><%= readiness[:local_demo][:label] %></p>
+  <p class="mt-1 text-xs leading-5 text-[#4f5d58]"><%= readiness[:local_demo][:detail] %></p>
+</div>
+<% { "Live integration configuration" => readiness[:integrations], "Access and webhook controls" => readiness[:security] }.each do |heading, items| %>
+  <%= tag.details open: !local_assigns.fetch(:compact, false), class: "border-b border-[#dfe5dc] last:border-b-0" do %>
+    <summary class="cursor-pointer px-6 py-4 text-sm font-semibold text-[#33413d]">
+      <%= heading %>
+      <span class="mt-1 block text-xs font-normal text-[#66716d]"><%= items.count { |item| item[:status] == :configured } %> of <%= items.size %> configured · Expand to review</span>
+    </summary>
+    <dl class="divide-y divide-[#dfe5dc] border-t border-[#dfe5dc]">
+      <% items.each do |item| %>
+        <div class="flex items-start justify-between gap-3 px-6 py-3">
+          <div class="min-w-0">
+            <dt class="text-sm font-semibold text-[#182023]"><%= item[:label] %></dt>
+            <dd class="mt-1 text-xs leading-5 text-[#66716d]"><%= item[:detail] %></dd>
+          </div>
+          <% status_classes = item[:status] == :configured ? "border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]" : "border-[#e2d96c] bg-[#fbfadf] text-[#6e6b17]" %>
+          <dd class="shrink-0 rounded-sm border px-2 py-1 text-xs font-semibold <%= status_classes %>"><%= item[:status].to_s.humanize %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+<% end %>

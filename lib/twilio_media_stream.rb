@@ -44,9 +44,9 @@ class TwilioMediaStream
     when "start"
       handle_start(payload, ws)
     when "media"
-      handle_media(payload)
+      handle_media(payload, ws)
     when "stop"
-      handle_stop(payload)
+      handle_stop(payload, ws)
     end
   rescue JSON::ParserError
     nil
@@ -55,7 +55,7 @@ class TwilioMediaStream
   def handle_start(payload, ws = nil)
     call_sid = payload.dig("start", "callSid")
     stream_sid = payload.dig("start", "streamSid") || payload["streamSid"]
-    return if call_sid.blank?
+    return if call_sid.blank? || stream_sid.blank? || ws.nil?
 
     conversation = conversation_for_call(call_sid)
     return if conversation.blank?
@@ -66,8 +66,13 @@ class TwilioMediaStream
       return
     end
 
-    stream_map[stream_sid] = call_sid if stream_sid.present?
-    stream_recordings[stream_sid] = [] if stream_sid.present?
+    if stream_map.key?(stream_sid)
+      close_socket(ws) unless stream_map[stream_sid][:socket].equal?(ws)
+      return
+    end
+
+    stream_map[stream_sid] = { call_sid: call_sid, socket: ws }
+    stream_recordings[stream_sid] = []
 
     conversation.call_events.create!(
       twilio_call_sid: call_sid,
@@ -79,9 +84,9 @@ class TwilioMediaStream
     start_openai_realtime_bridge(ws, conversation, call_sid, stream_sid, payload) if openai_realtime_stream?(conversation, payload)
   end
 
-  def handle_stop(payload)
-    call_sid = payload.dig("stop", "callSid")
+  def handle_stop(payload, ws = nil)
     stream_sid = payload.dig("stop", "streamSid") || payload["streamSid"]
+    call_sid = authorized_stream_call_sid(stream_sid, ws, payload.dig("stop", "callSid"))
     return if call_sid.blank?
 
     stream_map.delete(stream_sid) if stream_sid.present?
@@ -101,9 +106,9 @@ class TwilioMediaStream
     )
   end
 
-  def handle_media(payload)
+  def handle_media(payload, ws = nil)
     stream_sid = payload["streamSid"]
-    call_sid = payload.dig("media", "callSid") || stream_map[stream_sid]
+    call_sid = authorized_stream_call_sid(stream_sid, ws, payload.dig("media", "callSid"))
     return if call_sid.blank?
 
     conversation = conversation_for_call(call_sid)
@@ -118,6 +123,14 @@ class TwilioMediaStream
       track: payload.dig("media", "track"),
       payload: payload.dig("media", "payload")
     )
+  end
+
+  def authorized_stream_call_sid(stream_sid, ws, provided_call_sid)
+    binding = stream_map[stream_sid]
+    return unless ws && binding && binding[:socket].equal?(ws)
+    return if provided_call_sid.present? && provided_call_sid != binding[:call_sid]
+
+    binding[:call_sid]
   end
 
   def conversation_for_call(call_sid)
@@ -195,11 +208,12 @@ class TwilioMediaStream
   end
 
   def close_bridges_for_socket(ws)
-    realtime_bridges.delete_if do |_stream_sid, bridge|
-      next false unless bridge.twilio_ws == ws
+    stream_map.keys.each do |stream_sid|
+      next unless stream_map[stream_sid][:socket].equal?(ws)
 
-      bridge.close
-      true
+      stream_map.delete(stream_sid)
+      stream_recordings.delete(stream_sid)
+      close_realtime_bridge(stream_sid)
     end
   end
 

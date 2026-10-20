@@ -51,7 +51,13 @@ Rails.application.routes.draw do
       end
     end
     resources :conversations, only: [ :index, :show, :destroy ]
-    resources :idea_captures, only: [ :index, :show ]
+    resources :idea_captures, only: [ :index, :show ] do
+      member do
+        patch :review
+        patch :archive
+        patch :reopen
+      end
+    end
     resources :customers, only: [ :index, :show, :new, :create, :edit, :update, :destroy ]
     resources :outbound_calls, only: [ :create ]
     resources :app_settings, except: [ :show ] do

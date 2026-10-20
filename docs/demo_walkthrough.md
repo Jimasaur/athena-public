@@ -7,7 +7,7 @@ Use this walkthrough when you want one stable page that shows what Athena is bec
 Open the launchpad:
 
 ```text
-http://127.0.0.1:3001/admin/demo_scenarios
+http://127.0.0.1:3000/admin/demo_scenarios
 ```
 
 Use the **Seed all demos** button on that page for the fastest setup.
@@ -29,7 +29,7 @@ script/seed_demo_conversation
 The script prints an admin URL like:
 
 ```text
-http://127.0.0.1:3001/admin/conversations/40
+http://127.0.0.1:3000/admin/conversations/40
 ```
 
 The demo data is idempotent. Running either seed script again replaces the matching demo conversation records.

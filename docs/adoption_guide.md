@@ -14,6 +14,8 @@ The live assistant is Athena. Athena stores the call, transcript, call state, ti
 
 ## Fifteen-Minute Local Tour
 
+Use Ruby 3.4.7 and Bundler 4.0.2 with a POSIX shell (Linux, macOS, or WSL). See [operations](operations.md) for native dependencies and configuration behavior.
+
 ```sh
 cp .env.example .env
 bin/setup --skip-server
@@ -36,6 +38,8 @@ If you prefer port 3001:
 PORT=3001 bin/dev
 ```
 
+The example `.env` defaults to port 3000. Leave `PUBLIC_BASE_URL` blank for the local tour; setting a public origin intentionally requires admin authentication. Keep provider credentials blank until you move to a live evaluation.
+
 ## Demo Without External Sends
 
 Run the local smoke suite:
@@ -51,6 +55,8 @@ script/seed_demo_scenarios
 ```
 
 Seeded conversations include transcripts, call states, sidecar events, idea cards, and action drafts. Demo-marked actions write dry-run audit events instead of sending live SMS.
+
+From **Ideas**, search across the card content, filter by category or status, inspect the source conversation, and mark a card reviewed or archived. CSV export includes all matching ideas, across pages. Reopen a card when it needs more work. These review changes create timeline events without executing external actions.
 
 ## Live Demo Readiness
 
