@@ -17,7 +17,10 @@ module Admin
       ).call
 
       if result.ok
-        redirect_to admin_conversation_path(@action_draft.conversation), notice: "Draft sent."
+        side_effect = @action_draft.external_side_effect || {}
+        simulated = side_effect["dry_run"] == true || side_effect["mode"].to_s == "demo"
+        notice = simulated ? "Demo action completed. No message was sent." : "Draft sent."
+        redirect_to admin_conversation_path(@action_draft.conversation), notice: notice
       else
         redirect_to admin_conversation_path(@action_draft.conversation), alert: result.error
       end

@@ -1,19 +1,4 @@
-<% content_for(:title, "#{@use_case[:title]} | Athena Voice Ops Control") %>
-
-<section class="border-b border-[#dfe5dc] bg-[#f7f7f2]">
-  <div class="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6">
-    <nav class="flex flex-wrap items-center justify-between gap-4 text-sm">
-      <%= link_to root_path, class: "flex items-center gap-3" do %>
-        <%= image_tag "athena-logo.svg", class: "h-10 w-auto", alt: "Athena" %>
-      <% end %>
-      <div class="flex flex-wrap items-center gap-4 font-medium text-[#66716d]">
-        <%= link_to "Use cases", use_cases_path, class: "text-[#182023]" %>
-        <%= link_to "Dashboard", admin_root_path, class: "hover:text-[#182023]" %>
-        <%= link_to "Console", admin_conversations_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#0f766e] px-3 py-1.5 font-semibold text-[#0f766e] hover:bg-[#e8f3ef]" %>
-      </div>
-    </nav>
-  </div>
-</section>
+<% content_for(:title, "#{@use_case[:title]} | Athena Workflows") %>
 
 <section class="bg-[#f7f7f2]">
   <div class="mx-auto w-full max-w-6xl px-4 pb-14 pt-12 sm:px-6">
@@ -28,6 +13,12 @@
 
     <h1 class="mt-6 max-w-5xl text-4xl font-semibold leading-tight text-[#182023] md:text-6xl"><%= @use_case[:headline] %></h1>
     <p class="mt-6 max-w-3xl text-lg leading-8 text-[#4f5d58]"><%= @use_case[:summary] %></p>
+
+    <div class="mt-6 max-w-3xl space-y-2 border-l-2 border-[#0f766e] pl-4 text-sm leading-6 text-[#4f5d58]">
+      <p><strong>Available in this prototype:</strong> <%= @use_case[:implemented].join("; ") %>.</p>
+      <p><strong>Planned:</strong> <%= @use_case[:planned].join("; ") %>.</p>
+      <p>Use synthetic data. Impact estimates and workflow suggestions need human validation.</p>
+    </div>
 
     <div class="mt-8 flex flex-wrap gap-3">
       <%= link_to use_cases_path, class: "brand-primary-action inline-flex items-center gap-2 rounded-sm border px-4 py-2 text-sm font-semibold shadow-sm" do %>
@@ -83,7 +74,7 @@
       <span class="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]">
         <i class="ti ti-target-arrow text-xl"></i>
       </span>
-      <h2 class="mt-5 text-xl font-semibold text-[#182023]">Core actions</h2>
+      <h2 class="mt-5 text-xl font-semibold text-[#182023]">Workflow goals</h2>
       <ul class="mt-4 space-y-3 text-sm leading-6 text-[#4f5d58]">
         <% @use_case[:primary_actions].each do |action| %>
           <li class="flex gap-3">
@@ -99,6 +90,7 @@
         <i class="ti ti-circuit-cell text-xl"></i>
       </span>
       <h2 class="mt-5 text-xl font-semibold text-[#182023]">Sidecars</h2>
+      <p class="mt-2 text-xs leading-5 text-[#66716d]">Design components for this workflow; this list is not an inventory of installed services.</p>
       <ul class="mt-4 space-y-3 text-sm leading-6 text-[#4f5d58]">
         <% @use_case[:sidecars].each do |sidecar| %>
           <li class="flex gap-3">
@@ -113,7 +105,7 @@
       <span class="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-[#e8beb9] bg-[#fbecea] text-[#d95f54]">
         <i class="ti ti-report-analytics text-xl"></i>
       </span>
-      <h2 class="mt-5 text-xl font-semibold text-[#182023]">Outcomes</h2>
+      <h2 class="mt-5 text-xl font-semibold text-[#182023]">Target outcomes</h2>
       <ul class="mt-4 space-y-3 text-sm leading-6 text-[#4f5d58]">
         <% @use_case[:outcomes].each do |outcome| %>
           <li class="flex gap-3">

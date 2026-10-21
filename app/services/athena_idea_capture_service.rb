@@ -8,9 +8,13 @@ class AthenaIdeaCaptureService
   def call
     return unavailable("Conversation is required.") unless @conversation
 
-    idea = upsert_idea_capture
-    call_state = ensure_call_state
-    create_capture_event(call_state, idea)
+    idea, work_item, call_state = ActiveRecord::Base.transaction do
+      idea = upsert_idea_capture
+      work_item = WorkItemFromIdeaService.new(idea_capture: idea, actor: "voice_capture").call
+      call_state = ensure_call_state
+      create_capture_event(call_state, idea)
+      [ idea, work_item, call_state ]
+    end
     report_result = AthenaIdeaDiscordReportService.new(idea_capture: idea).call
     create_report_event(call_state, idea, report_result)
 
@@ -19,9 +23,10 @@ class AthenaIdeaCaptureService
       command: "capture_idea",
       action: "idea_captured",
       idea_capture_id: idea.id,
+      work_item_id: work_item.id,
       title: idea.title,
       category: idea.category,
-      reply: "I captured that idea for the rev cycle retreat review."
+      reply: "I captured that idea for review and added it to the work queue."
     }
   end
 

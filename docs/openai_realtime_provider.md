@@ -50,7 +50,7 @@ OPENAI_REALTIME_SESSION_OVERRIDES_JSON=
 For local tool callbacks, Athena uses:
 
 ```sh
-ATHENA_INTERNAL_BASE_URL=http://127.0.0.1:3001
+ATHENA_INTERNAL_BASE_URL=http://127.0.0.1:3000
 ```
 
 If that is blank, it falls back to `PUBLIC_BASE_URL`.

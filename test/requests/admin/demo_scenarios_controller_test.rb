@@ -13,6 +13,9 @@ module Admin
       assert_includes @response.body, "Run an Athena status check."
       assert_includes @response.body, "Seed all demos"
       assert_includes @response.body, "Live monitor"
+      assert_includes @response.body, "Configuration inventory only"
+      assert_includes @response.body, "seeded results do not demonstrate live delivery"
+      assert_operator @response.body.index("Start here"), :<, @response.body.index("Live call demo")
       DemoScenarioCatalog.all.each do |scenario|
         assert_includes @response.body, scenario[:title]
       end
@@ -33,6 +36,15 @@ module Admin
       assert_equal scenario[:action_status], conversation.action_drafts.first.status
       assert conversation.sidecar_events.where(kind: "state_patch.applied").exists?
       assert conversation.sidecar_events.where(kind: "idea_capture.captured").exists?
+    end
+
+    test "live monitor excludes newer synthetic conversations" do
+      seeded = DemoScenarioSeedService.new(slug: DemoScenarioCatalog.all.first[:slug]).call
+
+      get admin_demo_scenarios_path
+
+      assert_response :success
+      assert_select "a[href='#{admin_conversation_path(seeded)}']", text: /Open newest call/, count: 0
     end
 
     test "seed all creates all scenario conversations" do

@@ -4,21 +4,23 @@ This guide is for the next person opening Athena cold. It gets them from clone t
 
 ## What Athena Is
 
-Athena is the control plane around an OpenAI Realtime phone assistant:
+Athena is a workspace for turning conversations and incoming requests into coordinated operational work:
 
 ```text
-phone call -> OpenAI Realtime voice -> Athena records -> idea capture -> Discord report -> review library
+voice idea or staff web request -> work item -> owner and next step -> reviewed handoff -> recorded outcome
 ```
 
-The live assistant is Athena. Athena stores the call, transcript, call state, timeline, idea cards, action drafts, approvals, and external side effects.
+Athena keeps source conversations and ideas alongside work items, operator decisions, and delivery history. Delivery acknowledgement and work resolution are tracked separately.
 
 ## Fifteen-Minute Local Tour
+
+Use Ruby 3.4.7 and Bundler 4.0.2 with a POSIX shell (Linux, macOS, or WSL). See [operations](operations.md) for native dependencies and configuration behavior.
 
 ```sh
 cp .env.example .env
 bin/setup --skip-server
 bin/doctor
-script/seed_demo_scenarios
+script/seed_work_queue_demo
 bin/dev
 ```
 
@@ -36,6 +38,8 @@ If you prefer port 3001:
 PORT=3001 bin/dev
 ```
 
+The example `.env` defaults to port 3000. Leave `PUBLIC_BASE_URL` blank for the local tour; setting a public origin intentionally requires admin authentication. Keep provider credentials blank until you move to a live evaluation.
+
 ## Demo Without External Sends
 
 Run the local smoke suite:
@@ -51,6 +55,8 @@ script/seed_demo_scenarios
 ```
 
 Seeded conversations include transcripts, call states, sidecar events, idea cards, and action drafts. Demo-marked actions write dry-run audit events instead of sending live SMS.
+
+From **Ideas**, search across the card content, filter by category or status, inspect the source conversation, and mark a card reviewed or archived. CSV export includes all matching ideas, across pages. Reopen a card when it needs more work. These review changes create timeline events without executing external actions.
 
 ## Live Demo Readiness
 

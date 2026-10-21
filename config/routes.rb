@@ -34,7 +34,18 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   namespace :admin do
-    root "dashboard#show"
+    root "work_items#index"
+    get "overview" => "dashboard#show", as: :overview
+    resources :work_items, only: [ :index, :show, :new, :create, :edit, :update ] do
+      resources :handoffs, controller: "work_item_handoffs", only: [ :create ] do
+        member do
+          post :approve
+          post :deliver
+          post :cancel
+          post :reconcile
+        end
+      end
+    end
     resources :action_drafts, only: [] do
       member do
         post :approve
@@ -51,7 +62,13 @@ Rails.application.routes.draw do
       end
     end
     resources :conversations, only: [ :index, :show, :destroy ]
-    resources :idea_captures, only: [ :index, :show ]
+    resources :idea_captures, only: [ :index, :show ] do
+      member do
+        patch :review
+        patch :archive
+        patch :reopen
+      end
+    end
     resources :customers, only: [ :index, :show, :new, :create, :edit, :update, :destroy ]
     resources :outbound_calls, only: [ :create ]
     resources :app_settings, except: [ :show ] do

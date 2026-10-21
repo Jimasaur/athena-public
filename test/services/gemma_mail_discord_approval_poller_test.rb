@@ -153,6 +153,129 @@ class GemmaMailDiscordApprovalPollerTest < ActiveSupport::TestCase
     assert_nil runner.calls.find { |args| args.first == "gemma-mail-gog" }
   end
 
+  test "negated and ambiguous confirmations never send email" do
+    [ "do not send", "don't send it", "no, don't send", "not approved", "yes but wait", "please send it later" ].each_with_index do |content, index|
+      approval_id = "athena-conversation-#{conversations(:one).id}-negative#{index}"
+      runner = FakeRunner.new(
+        calls: [],
+        responses: [
+          command_result(messages_payload([
+            approval_message(approval_id, timestamp_ms: 1000),
+            human_message(content, timestamp_ms: 1200, id: "negative-#{index}")
+          ])),
+          command_result({ ok: true }.to_json)
+        ]
+      )
+
+      result = GemmaMailDiscordApprovalPoller.new(target: "channel:test", runner: runner).call
+
+      assert result[:ok], content
+      assert_nil runner.calls.find { |args| args.first == "gemma-mail-gog" }, content
+      assert_not result[:processed].any? { |item| item[:action] == "send" }, content
+    end
+  end
+
+  test "affirmative words in an edit do not approve the email" do
+    approval_id = "athena-conversation-#{conversations(:one).id}"
+    runner = FakeRunner.new(
+      calls: [],
+      responses: [
+        command_result(messages_payload([
+          approval_message(approval_id, timestamp_ms: 1000),
+          human_message("edit body to say yes, send the report tomorrow", timestamp_ms: 1200, id: "edit-confirmation")
+        ])),
+        command_result({ payload: { id: "updated-approval" } }.to_json),
+        command_result({ ok: true }.to_json)
+      ]
+    )
+
+    result = GemmaMailDiscordApprovalPoller.new(target: "channel:test", runner: runner).call
+
+    assert result[:ok]
+    assert_equal "edit", result[:processed].sole[:action]
+    assert_equal "yes, send the report tomorrow", result[:processed].sole[:edits][:body]
+    assert_nil runner.calls.find { |args| args.first == "gemma-mail-gog" }
+  end
+
+  test "explicit confirmation can identify its approval without a Discord reply" do
+    approval_id = "athena-conversation-#{conversations(:one).id}"
+    runner = FakeRunner.new(
+      calls: [],
+      responses: [
+        command_result(messages_payload([
+          approval_message(approval_id, timestamp_ms: 1000),
+          human_message("approve #{approval_id}!", timestamp_ms: 1200, id: "explicit-confirmation", reply_to: nil)
+        ])),
+        command_result("Sent."),
+        command_result({ ok: true }.to_json)
+      ]
+    )
+
+    result = GemmaMailDiscordApprovalPoller.new(target: "channel:test", runner: runner).call
+
+    assert result[:ok]
+    assert_equal [ { approval_id: approval_id, action: "send", ok: true } ], result[:processed]
+    assert runner.calls.find { |args| args.first == "gemma-mail-gog" }
+  end
+
+  test "only the revised approval can send after an edit across polling runs" do
+    conversation = conversations(:one)
+    approval_id = "athena-conversation-#{conversation.id}"
+    call_state = CallState.ensure_for_conversation(conversation, provider: "openai_realtime")
+    call_state.sidecar_events.create!(
+      conversation: conversation,
+      source: "test",
+      kind: "email_approval.sent_to_discord",
+      provider: "openclaw",
+      payload: {
+        approval_id: approval_id,
+        recipient: "demo@example.com",
+        subject: "Test subject",
+        body: "Original body",
+        discord_approval_message_id: "approval-1"
+      },
+      occurred_at: Time.current
+    )
+    edit = human_message("edit body to say Revised body", timestamp_ms: 1200, id: "edit-1")
+    stale_reply = human_message("yes", timestamp_ms: 1400, id: "stale-reply")
+    runner = FakeRunner.new(
+      calls: [],
+      responses: [
+        command_result(messages_payload([
+          approval_message(approval_id, timestamp_ms: 1000), edit, stale_reply
+        ])),
+        command_result({ payload: { id: "updated-approval" } }.to_json),
+        command_result({ ok: true }.to_json)
+      ]
+    )
+
+    result = GemmaMailDiscordApprovalPoller.new(target: "channel:test", runner: runner).call
+
+    assert_equal [ "edit" ], result[:processed].map { |item| item[:action] }
+    assert_nil runner.calls.find { |args| args.first == "gemma-mail-gog" }
+
+    runner = FakeRunner.new(
+      calls: [],
+      responses: [
+        command_result(messages_payload([
+          approval_message(approval_id, timestamp_ms: 1000), edit,
+          approval_message(approval_id, timestamp_ms: 1300).merge("id" => "updated-approval"),
+          stale_reply,
+          human_message("yes", timestamp_ms: 1500, id: "revised-reply", reply_to: "updated-approval")
+        ])),
+        command_result("Sent."),
+        command_result({ ok: true }.to_json)
+      ]
+    )
+
+    result = GemmaMailDiscordApprovalPoller.new(target: "channel:test", runner: runner).call
+
+    assert_equal [ { approval_id: approval_id, action: "send", ok: true } ], result[:processed]
+    send_call = runner.calls.find { |args| args.first == "gemma-mail-gog" }
+    assert_equal "Revised body", send_call[send_call.index("--body-escaped") + 1]
+    assert_equal "revised-reply", SidecarEvent.where(kind: "email_approval.sent").last.payload["discord_response_message_id"]
+  end
+
   test "applies inline subject edit and reposts approval" do
     conversation = conversations(:one)
     approval_id = "athena-conversation-#{conversation.id}"

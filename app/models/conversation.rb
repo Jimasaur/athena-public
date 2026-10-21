@@ -8,6 +8,7 @@ class Conversation < ApplicationRecord
   has_many :sidecar_events, dependent: :destroy
   has_many :action_drafts, dependent: :destroy
   has_many :idea_captures, dependent: :destroy
+  has_many :work_items, dependent: :nullify
   has_one_attached :recording
 
   validates :channel, :status, presence: true

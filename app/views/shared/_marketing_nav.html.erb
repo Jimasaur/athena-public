@@ -1,0 +1,14 @@
+<header class="border-b border-[#dfe5dc] bg-[#f7f7f2]">
+  <div class="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6">
+    <nav aria-label="Main navigation" class="flex flex-wrap items-center justify-between gap-4 text-sm">
+      <%= link_to root_path, class: "flex items-center gap-3", aria: { label: "Athena home" } do %>
+        <%= image_tag "athena-logo.svg", class: "h-10 w-auto", alt: "Athena" %>
+      <% end %>
+      <div class="flex flex-wrap items-center gap-4 font-medium text-[#66716d]">
+        <%= link_to "Workflows", use_cases_path, class: "hover:text-[#182023]", aria: { current: controller_name == "use_cases" ? "page" : nil } %>
+        <%= link_to "Demo scenarios", admin_demo_scenarios_path, class: "hover:text-[#182023]" %>
+        <%= link_to "Open workspace", admin_root_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#0f766e] px-3 py-1.5 font-semibold text-[#0f766e] hover:bg-[#e8f3ef]" %>
+      </div>
+    </nav>
+  </div>
+</header>

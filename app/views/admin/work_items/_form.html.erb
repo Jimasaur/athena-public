@@ -1,0 +1,51 @@
+<%= form_with model: [:admin, work_item], class: "space-y-6" do |form| %>
+  <% if work_item.errors.any? %>
+    <div class="rounded-sm border border-[#e8beb9] bg-[#fbecea] p-4 text-sm text-[#9d332c]" role="alert">
+      <p class="font-semibold">Review these details</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5"><% work_item.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+  <% if @unsaved_changes.present? %>
+    <section class="rounded-sm border border-[#e2d96c] bg-[#fbfadf] p-4 text-sm" aria-label="Your unsaved submission">
+      <h2 class="font-semibold text-[#6e6b17]">Your unsaved submission</h2>
+      <p class="mt-2 leading-6 text-[#66716d]">The editable form below contains the latest saved values. Use this copy to merge your changes; nothing from this submission was saved.</p>
+      <dl class="mt-4 space-y-3">
+        <% @unsaved_changes.each do |field, value| %>
+          <div><dt class="font-semibold text-[#33413d]"><%= field.humanize %></dt><dd class="mt-1 whitespace-pre-wrap break-words leading-6 text-[#4f5d58]"><%= value.to_s.presence || "Cleared" %></dd></div>
+        <% end %>
+      </dl>
+    </section>
+  <% end %>
+  <% if work_item.persisted? %><%= form.hidden_field :lock_version %><% end %>
+  <div class="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+    <section class="min-w-0 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-5 sm:p-6">
+      <h2 class="text-lg font-semibold text-[#182023]">The work</h2>
+      <div class="mt-5 space-y-5">
+        <div><%= form.label :title, "Title", class: "block text-sm font-semibold text-[#33413d]" %><%= form.text_field :title, required: true, minlength: 3, maxlength: 200, class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %></div>
+        <div><%= form.label :description, "Description", class: "block text-sm font-semibold text-[#33413d]" %><%= form.text_area :description, rows: 6, class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm", placeholder: "What is needed, and why does it matter?" %></div>
+        <div><%= form.label :next_step, "Next step", class: "block text-sm font-semibold text-[#33413d]" %><%= form.text_area :next_step, rows: 3, class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm", placeholder: "The next concrete step for the owner" %></div>
+        <% if work_item.persisted? %>
+          <div><%= form.label :resolution_note, "Resolution note", class: "block text-sm font-semibold text-[#33413d]" %><%= form.text_area :resolution_note, rows: 3, class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %><p class="mt-2 text-xs leading-5 text-[#66716d]">Required when marking work resolved. Describe the outcome; a delivery receipt alone does not establish resolution.</p></div>
+        <% end %>
+      </div>
+    </section>
+    <section class="min-w-0 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-5 sm:p-6">
+      <h2 class="text-lg font-semibold text-[#182023]">Ownership and timing</h2>
+      <div class="mt-5 space-y-5">
+        <div><%= form.label :kind, "Kind", class: "block text-sm font-semibold text-[#33413d]" %><%= form.select :kind, WorkItem::KINDS.map { |kind| [kind.humanize, kind] }, {}, class: "mt-2 w-full rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %></div>
+        <div><%= form.label :owner, "Owner", class: "block text-sm font-semibold text-[#33413d]" %><%= form.text_field :owner, maxlength: 120, placeholder: "Unassigned", class: "mt-2 w-full rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %><p class="mt-2 text-xs text-[#66716d]">An owner label for coordination; this does not send a notification.</p></div>
+        <div><%= form.label :priority, "Priority", class: "block text-sm font-semibold text-[#33413d]" %><%= form.select :priority, WorkItem::PRIORITIES.map { |priority| [priority.humanize, priority] }, {}, class: "mt-2 w-full rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %></div>
+        <div><%= form.label :due_on, "Due date", class: "block text-sm font-semibold text-[#33413d]" %><%= form.date_field :due_on, class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %></div>
+        <% if work_item.persisted? %>
+          <div><%= form.label :status, "Status", class: "block text-sm font-semibold text-[#33413d]" %><%= form.select :status, WorkItem::STATUSES.map { |status| [status.humanize, status] }, {}, class: "mt-2 w-full rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %></div>
+        <% else %>
+          <p class="rounded-sm border border-[#e2d96c] bg-[#fbfadf] px-3 py-3 text-xs leading-5 text-[#6e6b17]">Web intake starts in Needs review. Use synthetic information while evaluating this prototype.</p>
+        <% end %>
+      </div>
+    </section>
+  </div>
+  <div class="flex flex-wrap items-center gap-4">
+    <%= form.submit work_item.persisted? ? "Save changes" : "Capture work item", class: "brand-primary-action rounded-sm border px-5 py-3 text-sm font-semibold" %>
+    <%= link_to "Cancel", work_item.persisted? ? admin_work_item_path(work_item) : admin_work_items_path, class: "text-sm font-semibold text-[#66716d] hover:text-[#182023]" %>
+  </div>
+<% end %>

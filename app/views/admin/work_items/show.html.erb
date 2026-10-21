@@ -1,0 +1,80 @@
+<% content_for(:title, "#{@work_item.title} | Athena") %>
+<%= render "admin/shared/page_header", title: content_tag(:span, @work_item.title, class: "[overflow-wrap:anywhere]"), subtitle: "Work item ##{@work_item.id} · #{@work_item.kind.humanize}#{' · Synthetic demo' if @work_item.demo?}", back: { label: "Back to work queue", path: admin_work_items_path } do %>
+  <%= render "status", status: @work_item.status %>
+  <%= link_to "Update work item", edit_admin_work_item_path(@work_item), class: "brand-primary-action rounded-sm border px-4 py-2 text-sm font-semibold" %>
+<% end %>
+
+<div class="grid min-w-0 gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+  <div class="min-w-0 space-y-6">
+    <section class="min-w-0 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-5 sm:p-6">
+      <h2 class="text-lg font-semibold text-[#182023]">The work</h2>
+      <dl class="mt-5 space-y-6 text-sm">
+        <div><dt class="font-semibold text-[#33413d]">Description</dt><dd class="mt-2 whitespace-pre-wrap break-words leading-7 text-[#4f5d58]"><%= @work_item.description.presence || "No description captured." %></dd></div>
+        <div><dt class="font-semibold text-[#33413d]">Next step</dt><dd class="mt-2 whitespace-pre-wrap break-words leading-7 text-[#4f5d58]"><%= @work_item.next_step.presence || "Define the next concrete step during review." %></dd></div>
+        <% if @work_item.resolution_note.present? %>
+          <div><dt class="font-semibold text-[#33413d]">Resolution note</dt><dd class="mt-2 whitespace-pre-wrap break-words leading-7 text-[#4f5d58]"><%= @work_item.resolution_note %></dd></div>
+        <% end %>
+        <% if @work_item.resolved_at %><div><dt class="font-semibold text-[#33413d]">Resolved</dt><dd class="mt-2 text-[#4f5d58]"><%= l(@work_item.resolved_at, format: :long) %></dd></div><% end %>
+      </dl>
+    </section>
+    <section class="min-w-0 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-5 sm:p-6">
+      <h2 class="text-lg font-semibold text-[#182023]">Source evidence</h2>
+      <% if @work_item.conversation %>
+        <p class="mt-4 text-sm leading-7 text-[#4f5d58]"><%= @work_item.conversation.summary.presence || "Open the conversation to review its transcript and activity." %></p>
+        <%= link_to "Open conversation ##{@work_item.conversation_id}", admin_conversation_path(@work_item.conversation), class: "mt-4 inline-block text-sm font-semibold text-[#0f766e] underline" %>
+      <% end %>
+      <% if @work_item.idea_capture %>
+        <p class="mt-4 break-words text-sm font-semibold text-[#33413d]"><%= @work_item.idea_capture.title %></p>
+        <%= link_to "Open source idea", admin_idea_capture_path(@work_item.idea_capture), class: "mt-2 inline-block text-sm font-semibold text-[#0f766e] underline" %>
+      <% end %>
+      <% unless @work_item.conversation || @work_item.idea_capture %>
+        <p class="mt-4 text-sm leading-7 text-[#66716d]">Captured through <%= @work_item.intake_source.humanize.downcase %> intake. No source conversation is attached.</p>
+      <% end %>
+    </section>
+  </div>
+  <aside class="min-w-0">
+    <section class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-5 sm:p-6">
+      <h2 class="text-lg font-semibold text-[#182023]">Ownership and timing</h2>
+      <dl class="mt-5 space-y-4 text-sm">
+        <% [["Owner", @work_item.owner.presence || "Unassigned"], ["Priority", @work_item.priority.humanize], ["Due", @work_item.due_on ? l(@work_item.due_on, format: :long) : "Not set"], ["Source", @work_item.intake_source.humanize], ["Last updated", l(@work_item.updated_at, format: :short)]].each do |label, value| %>
+          <div class="flex flex-wrap justify-between gap-2 border-b border-[#dfe5dc] pb-3 last:border-b-0"><dt class="text-[#66716d]"><%= label %></dt><dd class="min-w-0 break-all font-semibold text-[#33413d]"><%= value %></dd></div>
+        <% end %>
+      </dl>
+      <% if @work_item.overdue? %><p class="mt-3 text-xs font-semibold text-[#9d332c]">Overdue — review the next step with the owner.</p><% end %>
+      <p class="mt-5 text-xs leading-6 text-[#66716d]">An owner is a coordination label. Delivery acknowledgments do not mark this work resolved.</p>
+    </section>
+  </aside>
+</div>
+
+<section class="mt-6 min-w-0 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-5 sm:p-6">
+  <h2 class="text-lg font-semibold text-[#182023]">Reviewed handoff</h2>
+  <p class="mt-2 max-w-3xl text-sm leading-7 text-[#66716d]">Prepare a snapshot, review the destination and payload, then approve it. Delivery is a separate action and records a receipt, not completion of the work.</p>
+  <% if @blocking_handoff %>
+    <p class="mt-5 rounded-sm border border-[#e2d96c] bg-[#fbfadf] p-3 text-sm leading-6 text-[#6e6b17]"><%= @blocking_handoff.delivery_uncertain? ? "Reconcile the uncertain delivery before preparing another handoff." : "Review or cancel the current snapshot before preparing another handoff." %> <%= link_to "Review handoff ##{@blocking_handoff.id}", "#handoff-#{@blocking_handoff.id}", class: "font-semibold underline" %></p>
+  <% else %>
+    <%= form_with url: admin_work_item_handoffs_path(@work_item), method: :post, class: "mt-5 flex flex-wrap items-center gap-4" do %>
+      <label class="flex items-center gap-2 text-sm text-[#33413d]"><%= check_box_tag :simulate, "1", true, class: "h-4 w-4 accent-[#0f766e]" %>Simulate delivery without contacting an endpoint</label>
+      <%= submit_tag "Prepare handoff", class: "brand-primary-action rounded-sm border px-4 py-2.5 text-sm font-semibold" %>
+    <% end %>
+  <% end %>
+  <p class="mt-3 text-xs leading-6 text-[#66716d]">Live handoffs use the connector configured in Connections. Synthetic source records always use a dry run.</p>
+  <div class="mt-6 space-y-4"><% @handoffs.each do |handoff| %><%= render "handoff", handoff: handoff %><% end %></div>
+  <% if @handoffs.empty? %><p class="mt-5 text-sm text-[#66716d]">No handoffs prepared yet.</p><% end %>
+</section>
+
+<section class="mt-6 min-w-0 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-5 sm:p-6">
+  <h2 class="text-lg font-semibold text-[#182023]">Work history</h2>
+  <p class="mt-2 text-xs text-[#66716d]">Showing the latest <%= @events.size %> of <%= @event_count %> recorded events.</p>
+  <ol class="mt-5 divide-y divide-[#dfe5dc]">
+    <% @events.each do |event| %>
+      <li class="min-w-0 py-4 first:pt-0">
+        <div class="flex flex-wrap justify-between gap-2"><p class="text-sm font-semibold text-[#33413d]"><%= event.event_type.tr(".", " ").humanize %></p><time class="text-xs text-[#66716d]" datetime="<%= event.created_at.iso8601 %>"><%= l(event.created_at, format: :short) %></time></div>
+        <p class="mt-1 text-xs text-[#66716d]">Recorded by <%= event.actor %></p>
+        <% event.details.to_h.fetch("changes", {}).each do |field, values| %>
+          <p class="mt-2 break-words text-xs leading-6 text-[#4f5d58]"><strong><%= field.humanize %>:</strong> <%= Array(values).first.to_s.presence || "Not set" %> → <%= Array(values).last.to_s.presence || "Not set" %></p>
+        <% end %>
+        <% if event.event_type.start_with?("handoff.") %><p class="mt-2 text-xs text-[#66716d]">See the handoff record for its reviewed snapshot and delivery state.</p><% end %>
+      </li>
+    <% end %>
+  </ol>
+</section>

@@ -1,0 +1,33 @@
+<article id="handoff-<%= handoff.id %>" class="min-w-0 rounded-sm border border-[#dfe5dc] bg-[#f7f7f2] p-4 sm:p-5" data-handoff-id="<%= handoff.id %>">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div><h3 class="text-sm font-semibold text-[#182023]">Handoff #<%= handoff.id %> · <%= handoff.simulated? ? "Simulated delivery recorded" : handoff.status.humanize %></h3><p class="mt-1 text-xs text-[#66716d]">Prepared <%= l(handoff.created_at, format: :short) %> · work revision <%= handoff.work_item_lock_version %></p></div>
+    <span class="rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-2 py-1 text-xs font-semibold text-[#33413d]"><%= handoff.dry_run ? "Dry run" : "Live endpoint" %></span>
+  </div>
+  <dl class="mt-4 space-y-2 text-xs leading-6">
+    <div><dt class="font-semibold text-[#33413d]">Destination snapshot</dt><dd class="break-all text-[#4f5d58]"><%= handoff.destination_label %></dd></div>
+    <% if handoff.approved_at %><div><dt class="font-semibold text-[#33413d]">Approval</dt><dd class="text-[#4f5d58]"><%= handoff.approved_by %> · <%= l(handoff.approved_at, format: :short) %></dd></div><% end %>
+    <% if handoff.delivered_at %><div><dt class="font-semibold text-[#33413d]"><%= handoff.dry_run ? "Simulated delivery" : "Delivery acknowledgment" %></dt><dd class="text-[#4f5d58]"><%= l(handoff.delivered_at, format: :short) %> · work resolution is unchanged</dd></div><% end %>
+    <% if !handoff.dry_run? && handoff.response.to_h["http_status"].present? %><div><dt class="font-semibold text-[#33413d]">Receiver response</dt><dd class="text-[#4f5d58]">HTTP <%= handoff.response["http_status"] %></dd></div><% end %>
+  </dl>
+  <% unless handoff.dry_run? %><p class="mt-2 text-xs leading-6 text-[#66716d]">The exact configured destination is bound to this approval. Only its origin is shown here.</p><% end %>
+  <% if handoff.error.present? %><p class="mt-3 break-words rounded-sm border border-[#e8beb9] bg-[#fbecea] p-3 text-xs leading-6 text-[#9d332c]" role="status"><%= handoff.error %></p><% end %>
+  <% unless handoff.revision_current? %><p class="mt-3 text-xs font-semibold leading-6 text-[#6e6b17]"><%= %w[pending_approval approved].include?(handoff.status) ? "This work item changed after preparation. Prepare and approve a new snapshot before delivery." : "Historical snapshot from an earlier work revision." %></p><% end %>
+  <details class="mt-4 min-w-0"><summary class="cursor-pointer text-xs font-semibold text-[#0f766e]">Review exact payload</summary><pre class="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-3 text-xs leading-6 text-[#33413d]"><%= JSON.pretty_generate(handoff.payload) %></pre></details>
+  <div class="mt-4 flex flex-wrap gap-3">
+    <% if handoff.status == "pending_approval" && handoff.revision_current? %><%= button_to "Approve this snapshot", approve_admin_work_item_handoff_path(@work_item, handoff), method: :post, class: "brand-primary-action rounded-sm border px-3 py-2 text-xs font-semibold" %><% end %>
+    <% if handoff.status == "approved" && handoff.revision_current? %><%= button_to handoff.dry_run ? "Run simulated delivery" : "Deliver approved snapshot", deliver_admin_work_item_handoff_path(@work_item, handoff), method: :post, class: "brand-primary-action rounded-sm border px-3 py-2 text-xs font-semibold" %><% end %>
+    <% if %w[pending_approval approved failed].include?(handoff.status) %><%= button_to "Cancel handoff", cancel_admin_work_item_handoff_path(@work_item, handoff), method: :post, class: "rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-xs font-semibold text-[#66716d]" %><% end %>
+  </div>
+  <% if handoff.delivery_uncertain? %>
+    <div class="mt-5 border-t border-[#dfe5dc] pt-4">
+      <h4 class="text-sm font-semibold text-[#9d332c]">Reconcile uncertain delivery</h4>
+      <p class="mt-2 text-xs leading-6 text-[#66716d]">Check the receiving system before recording what happened. Do not retry while the delivery outcome is uncertain.</p>
+      <%= form_with url: reconcile_admin_work_item_handoff_path(@work_item, handoff), method: :post, class: "mt-4 space-y-3" do %>
+        <div><%= label_tag "handoff_outcome_#{handoff.id}", "Observed outcome", class: "block text-xs font-semibold text-[#33413d]" %><%= select_tag "handoff[outcome]", options_for_select([["Choose observed outcome", ""], ["Delivery confirmed", "delivered"], ["Not delivered confirmed", "not_delivered"]]), id: "handoff_outcome_#{handoff.id}", required: true, class: "mt-2 w-full rounded-sm border border-[#dfe5dc] bg-white px-3 py-2 text-sm" %></div>
+        <div><%= label_tag "handoff_note_#{handoff.id}", "Reconciliation evidence", class: "block text-xs font-semibold text-[#33413d]" %><%= text_area_tag "handoff[note]", nil, id: "handoff_note_#{handoff.id}", required: true, rows: 3, maxlength: 2000, class: "mt-2 w-full rounded-sm border border-[#dfe5dc] bg-white px-3 py-2 text-sm", placeholder: "What did you check, and what confirmed the outcome?" %></div>
+        <%= submit_tag "Record reconciliation", class: "rounded-sm border border-[#0f766e] bg-[#fffffb] px-3 py-2 text-xs font-semibold text-[#0f766e]" %>
+      <% end %>
+    </div>
+  <% end %>
+  <% if handoff.reconciled_at %><p class="mt-4 break-words text-xs leading-6 text-[#66716d]">Reconciled by <%= handoff.reconciled_by %>: <%= handoff.reconciliation_note %></p><% end %>
+</article>

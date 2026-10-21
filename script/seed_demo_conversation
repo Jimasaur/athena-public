@@ -6,7 +6,7 @@ require_relative "../config/environment"
 
 slug = ARGV.first.presence || "rev-cycle-ideation-session"
 conversation = DemoScenarioSeedService.new(slug: slug).call
-host = ENV.fetch("ATHENA_BASE_URL", "http://127.0.0.1:3001")
+host = ENV.fetch("ATHENA_BASE_URL", "http://127.0.0.1:#{ENV.fetch('PORT', '3000')}")
 
 puts JSON.pretty_generate(
   ok: true,

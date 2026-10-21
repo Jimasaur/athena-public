@@ -19,6 +19,18 @@ Twilio number
 
 ## Main Concepts
 
+`WorkItem`
+
+The independent unit of operational work: request, issue, opportunity, or follow-up. Holds owner, status, priority, due date, next step, and resolution note. Optional source conversation and idea links provide context without forcing web intake to create artificial phone records. Source deletion nullifies links rather than deleting the work item.
+
+`WorkItemEvent`
+
+Transactional history for work creation, edits, state changes, and handoff decisions. This is an application review trail rather than an immutable compliance ledger.
+
+`WorkItemHandoff`
+
+A saved proposed downstream action with payload, work revision, destination, approval, idempotency key, and delivery result. Preparing, approving, and delivering are separate operator actions. A changed revision requires new review. Unknown delivery requires explicit reconciliation; acknowledgement does not resolve the work item.
+
 `Conversation`
 
 The durable call or message thread. It links the caller, transcript messages, call events, call state, sidecar events, action drafts, and recordings.
@@ -70,7 +82,9 @@ Athena tools:
 
 Admin and demo:
 
-- `/admin`
+- `/admin` - work queue
+- `/admin/work_items/new` - authenticated staff web intake
+- `/admin/overview` - source records and configuration inventory
 - `/admin/demo_scenarios`
 - `/admin/conversations`
 - `/use-cases`

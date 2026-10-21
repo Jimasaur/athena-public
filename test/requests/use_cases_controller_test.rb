@@ -5,7 +5,8 @@ class UseCasesControllerTest < ActionDispatch::IntegrationTest
     get use_cases_path
 
     assert_response :success
-    assert_select "h1", text: /Four paths/
+    assert_select "h1", text: /Give incoming work a clear next step/
+    assert_select "a[href='#{admin_root_path}']", text: "Explore the work queue"
     assert_select "a[href='#{use_case_path("rev-cycle-ideation-session")}']"
     assert_select "a[href='#{use_case_path("automation-opportunity-discovery")}']"
   end
@@ -15,7 +16,9 @@ class UseCasesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", text: /retreat-ready revenue cycle ideas/
-    assert_select "h2", text: "Core actions"
+    assert_select "h2", text: "Workflow goals"
+    assert_includes response.body, "Available in this prototype:"
+    assert_includes response.body, "Planned:"
     assert_select "h2", text: "Real workflows to design around."
     assert_select "h3", text: "Rough Idea Capture"
     assert_select "code", text: "idea_capture"

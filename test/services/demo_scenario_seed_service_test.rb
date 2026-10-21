@@ -24,6 +24,9 @@ class DemoScenarioSeedServiceTest < ActiveSupport::TestCase
 
     assert_equal 1, @conversation.action_drafts.count
     assert_equal 1, @conversation.idea_captures.count
+    assert_equal 1, @conversation.work_items.count
+    assert @conversation.work_items.first.demo?
+    assert_equal @conversation.idea_captures.first.id, @conversation.work_items.first.idea_capture_id
     assert_equal scenario[:action_status], @conversation.action_drafts.first.status
     assert @conversation.sidecar_events.where(kind: "state_patch.applied").exists?
     assert @conversation.sidecar_events.where(kind: "summary.created").exists?
@@ -41,5 +44,22 @@ class DemoScenarioSeedServiceTest < ActiveSupport::TestCase
 
     assert_not_equal first.id, second.id
     assert_equal 1, Conversation.where(twilio_call_sid: first.twilio_call_sid).count
+    assert_equal 1, WorkItem.where(conversation_id: second.id).count
+    assert_not WorkItem.where(conversation_id: first.id).exists?
+  end
+
+  test "resetting a demo replaces only work derived from that synthetic source" do
+    first = DemoScenarioSeedService.new(slug: "rev-cycle-ideation-session").call
+    derived_item_id = first.work_items.first.id
+    manual = WorkItem.create!(title: "Staff-created independent follow-up", conversation: first, intake_source: "web")
+    unrelated = WorkItem.create!(title: "Another conversation request", conversation: conversations(:two))
+
+    assert_no_difference -> { WorkItem.count } do
+      DemoScenarioSeedService.new(slug: "rev-cycle-ideation-session").call
+    end
+
+    assert_not WorkItem.exists?(derived_item_id)
+    assert_nil manual.reload.conversation_id
+    assert_equal conversations(:two).id, unrelated.reload.conversation_id
   end
 end

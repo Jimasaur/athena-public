@@ -1,79 +1,28 @@
-# Athena Next Build Plan
+# Athena build direction
 
-Athena is now an OpenAI Realtime-first voice stack. The next build phase should focus on making live demos reliable, useful, and easy to explain.
+The product direction is work intake and coordination. Voice is one entry point; the operator's work queue and reviewed handoff are the center of the product.
 
-## Goal
+## Current slice
 
-Get to a polished demo loop:
+- Work items with ownership labels, status, priority, due dates, next steps, and resolution notes.
+- Staff web intake and conversion from existing voice idea capture.
+- Searchable queue views for open, needs review, unassigned, overdue, and all work.
+- Linked source conversations and ideas, with work event history and stale-edit protection.
+- Prepared, approved webhook handoffs with revision checks, idempotency keys, simulated delivery, and uncertain-delivery reconciliation.
+- A synthetic demonstration that requires no live provider credentials.
 
-```text
-call the number
-  -> Athena answers
-  -> caller talks through a rev cycle improvement idea
-  -> Athena captures a structured idea card
-  -> Discord receives the idea report
-  -> transcript email is queued when configured
-  -> admin UI shows the call, idea, and sidecar trail
-```
+## Next useful validation
 
-## Build Order
+Choose one operational intake workflow and the downstream system that already owns its work. Measure whether staff can capture enough context, assign ownership, make a reviewed handoff, and find the result without returning to scattered messages.
 
-1. Live call reliability
+Record delivery acknowledgement separately from the business outcome. Measure requests with an owner, time to first reviewed handoff, failed/unknown handoffs, and work explicitly resolved with evidence. These are proposed pilot measures, not existing production results.
 
-- Confirm Twilio routes to the active `PUBLIC_BASE_URL`.
-- Confirm `OPENAI_API_KEY`, `OPENAI_REALTIME_MODEL`, and `OPENAI_REALTIME_VOICE`.
-- Keep `script/smoke_twilio_voice` green.
-- Review the last call from `/admin/conversations` after every live test.
+## Expansion order
 
-2. Idea capture confidence
+1. Add team identity and permissions, replacing owner labels with actual assignments.
+2. Add one connector with documented receiver deduplication and a way to reconcile delivery.
+3. Extend voice capture to generic work templates and add one input channel selected by the pilot.
+4. Add reminders and service targets after the ownership and queue workflow is proven.
+5. Add downstream status synchronization and validated outcome reporting.
 
-- Keep `athena_command` small and predictable.
-- Prefer `semantic_request` for natural language asks.
-- Make `capture_idea` the primary live-demo tool path.
-- Confirm each live call produces one useful `IdeaCapture`.
-- Confirm the Athena Discord channel receives the report.
-- Keep web search replies grounded in returned snippets.
-- Log arguments and compact results into `CallEvent`.
-
-3. Email approval polish
-
-- Use `ATHENA_APPROVAL_CHANNEL` and `ATHENA_APPROVAL_TARGET` for the dedicated Athena approval destination.
-- Keep approval IDs stable and visible.
-- Make edit/approve/cancel replies work in the same Discord channel.
-- Keep transcript emails separate from user-requested emails by using suffixed approval IDs.
-
-4. Admin demo polish
-
-- Conversations should show status, transcript, metadata, timeline, queued actions, and recording state.
-- The timeline should make tool calls, approval requests, and sends easy to narrate.
-- Demo scenarios should seed realistic records without sending real external messages.
-
-5. Use-case expansion
-
-- Rev cycle ideation session.
-- Automation opportunity discovery.
-- Denials and cost savings lab.
-- Retreat review library with search, tags, and exports.
-
-## Near-Term Backlog
-
-- Add a visible Realtime health panel to the dashboard.
-- Add a last-call diagnostic button that summarizes tool calls and failures.
-- Add filters and tags to the Ideas page.
-- Add CSV/export support for retreat prep.
-- Add a one-command demo reset for conversations, sidecar events, and action drafts.
-- Add a clear status indicator for Discord approval polling.
-- Add operator notes and tags to conversations.
-- Add a stricter policy layer for healthcare demo scenarios.
-
-## Done Definition
-
-A slice is demo-ready when:
-
-- a call can be placed to the Twilio number
-- Athena answers with the configured profile
-- `capture_idea` succeeds
-- admin transcript roles are correct
-- the idea report reaches Discord
-- the Ideas admin page shows the captured card
-- the conversation timeline tells the story without needing logs
+Keep the existing live voice path reliable while adding the work layer. Review approval boundaries, process interruption, stale revisions, and uncertain external results for every connector. Optional sidecars support the application; they do not define the product category.

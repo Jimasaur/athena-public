@@ -1,14 +1,14 @@
 # Athena Stack Overview
 
-Athena is a voice-assistant operations stack for turning revenue cycle retreat calls into structured, reviewable improvement ideas.
+Athena is an operations workspace for turning conversations and staff requests into structured work, clear ownership, reviewed handoffs, and recorded outcomes.
 
 At a high level, Athena answers this question:
 
-> What if a rough improvement idea spoken into a phone could become a durable workshop-ready insight?
+> How can an incoming request keep its context, get an owner, and reach a reviewable next step?
 
 ## Core Idea
 
-Someone calls a real Twilio number, talks to Athena, and Athena captures the call as state, transcript messages, tool calls, sidecar events, idea cards, Discord reports, and follow-up work.
+Staff web intake creates a work item directly. Voice idea capture creates a conversation-linked opportunity. Both reach the same work queue, where an operator can assign ownership, track progress, prepare a reviewed handoff, and record resolution separately from delivery.
 
 Athena is now built around one live voice path:
 
@@ -25,11 +25,13 @@ Caller
 
 ## Main Layers
 
+Work items are the coordination layer. They hold a request, issue, opportunity, or follow-up with an owner label, status, priority, due date, next step, and resolution note. Work-item events retain changes. Prepared handoffs retain the reviewed payload and delivery lifecycle.
+
 Twilio is the phone layer. It owns the phone number, call routing, media stream, call status callbacks, optional transcription callbacks, SMS readiness, and telephony plumbing.
 
 OpenAI Realtime is the live voice layer. Athena speaks with the caller, listens over the Twilio media stream, calls Athena tools, and can adapt while the call is still happening.
 
-Athena is the operating layer. It stores the call, normalizes transcripts, tracks call state, exposes tools to Athena, displays the admin UI, and turns conversations into idea cards.
+Rails is the application layer. It owns work records, the authenticated operator workspace, staff web intake, source conversations, and reviewed handoff controls. Call state stays specific to the voice lifecycle rather than becoming the state of all work.
 
 Sidecars are intelligence helpers. They can observe, summarize, search, classify, draft actions, or hand work to specialized local agents without making the live call flow heavy.
 
@@ -64,7 +66,7 @@ OpenClaw can handle sidecar delivery into Discord. Gemma Mail remains available 
 
 ## Product Directions
 
-Athena currently uses four retreat-oriented lenses on the same Twilio plus OpenAI Realtime foundation:
+The shared work layer supports operational intake and coordination. These existing voice scenarios remain reference examples:
 
 - Rev cycle ideation session.
 - Automation opportunity discovery.

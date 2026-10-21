@@ -1,0 +1,3 @@
+<% content_for(:title, "New work item | Athena") %>
+<%= render "admin/shared/page_header", title: "New work item", subtitle: "Capture the request and make its next step clear.", back: { label: "Back to work queue", path: admin_work_items_path } %>
+<%= render "form", work_item: @work_item %>

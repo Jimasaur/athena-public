@@ -112,7 +112,7 @@ class GemmaMailDiscordApprovalPoller
     return unless conversation
 
     conversation.with_lock do
-      return if terminal_approval?(approval.approval_id) || processed_reply?(response.message_id)
+      return if terminal_approval?(approval.approval_id) || processed_reply?(response.message_id) || superseded_approval_message?(approval)
 
       process_response_without_lock(approval, response)
     end
@@ -248,15 +248,18 @@ class GemmaMailDiscordApprovalPoller
     return unless allowed_approver_ids.include?(author_id)
 
     content = message["content"].to_s.strip
-    normalized = content.downcase.gsub(/[[:punct:]]+\z/, "").strip
     approval_id = extract_approval_id(content)
+    normalized = content.downcase
+    normalized = normalized.gsub(approval_id.downcase, "") if approval_id.present?
+    normalized = normalized.gsub(/[[:punct:]]+\z/, "").squish
+    # Only an explicit confirmation can send mail; words inside edits or prose are not approval.
     kind =
-      if normalized.match?(/\b(yes|y|approve|approved|send|send it|go ahead|do it|proceed)\b/)
-        :approve
-      elsif normalized.match?(/\b(no|n|cancel|discard|stop)\b/)
-        :cancel
-      elsif normalized.match?(/\Aedit\b/) || edit_instruction?(content)
+      if normalized.match?(/\Aedit\b/) || edit_instruction?(content)
         :edit
+      elsif normalized.match?(/\A(?:no|n|cancel|discard|stop|do not send(?: it)?|don['’]?t send(?: it)?)\z/)
+        :cancel
+      elsif normalized.match?(/\A(?:yes|y|approve|approved|send|send it|go ahead|do it|proceed)\z/)
+        :approve
       end
     return unless kind
 
@@ -386,12 +389,14 @@ class GemmaMailDiscordApprovalPoller
   end
 
   def superseded_approval_message?(approval)
-    SidecarEvent.where(kind: "email_approval.sent_to_discord").any? do |event|
+    latest = SidecarEvent.where(kind: "email_approval.sent_to_discord").order(created_at: :desc, id: :desc).find do |event|
       payload = event.payload.to_h
       payload["approval_id"] == approval.approval_id &&
         payload["discord_approval_message_id"].present? &&
-        payload["discord_approval_message_id"] != approval.message_id
+        payload.dig("result", "ok") != false
     end
+
+    latest.present? && latest.payload.to_h["discord_approval_message_id"] != approval.message_id
   end
 
   def terminal_approval?(approval_id)
