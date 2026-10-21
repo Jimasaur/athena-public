@@ -3,6 +3,9 @@
   subtitle: "#{@idea_capture.category.presence || "Uncategorized"} · #{@idea_capture.caller_name}",
   back: { label: "Back to ideas", path: admin_idea_captures_path },
   right_class: "flex flex-wrap items-center gap-2 text-xs text-[#66716d]" do %>
+  <% if @idea_capture.work_item %>
+    <%= link_to "Work item", admin_work_item_path(@idea_capture.work_item), class: "brand-primary-action inline-flex rounded-sm border px-3 py-2 text-sm font-semibold" %>
+  <% end %>
   <%= link_to admin_conversation_path(@conversation), class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
     <%= tabler_icon("phone-call", size: 16) %>
     Conversation

@@ -4,13 +4,13 @@ This guide is for the next person opening Athena cold. It gets them from clone t
 
 ## What Athena Is
 
-Athena is the control plane around an OpenAI Realtime phone assistant:
+Athena is a workspace for turning conversations and incoming requests into coordinated operational work:
 
 ```text
-phone call -> OpenAI Realtime voice -> Athena records -> idea capture -> Discord report -> review library
+voice idea or staff web request -> work item -> owner and next step -> reviewed handoff -> recorded outcome
 ```
 
-The live assistant is Athena. Athena stores the call, transcript, call state, timeline, idea cards, action drafts, approvals, and external side effects.
+Athena keeps source conversations and ideas alongside work items, operator decisions, and delivery history. Delivery acknowledgement and work resolution are tracked separately.
 
 ## Fifteen-Minute Local Tour
 
@@ -20,7 +20,7 @@ Use Ruby 3.4.7 and Bundler 4.0.2 with a POSIX shell (Linux, macOS, or WSL). See 
 cp .env.example .env
 bin/setup --skip-server
 bin/doctor
-script/seed_demo_scenarios
+script/seed_work_queue_demo
 bin/dev
 ```
 

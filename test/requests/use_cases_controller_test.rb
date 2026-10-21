@@ -5,7 +5,8 @@ class UseCasesControllerTest < ActionDispatch::IntegrationTest
     get use_cases_path
 
     assert_response :success
-    assert_select "h1", text: /Four paths/
+    assert_select "h1", text: /Give incoming work a clear next step/
+    assert_select "a[href='#{admin_root_path}']", text: "Explore the work queue"
     assert_select "a[href='#{use_case_path("rev-cycle-ideation-session")}']"
     assert_select "a[href='#{use_case_path("automation-opportunity-discovery")}']"
   end

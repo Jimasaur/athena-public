@@ -29,7 +29,8 @@ class IntegrationReadinessService
         configuration("A2P campaign", %w[TWILIO_A2P_CAMPAIGN_SID],
           detail: "Campaign ID present; approval and sending eligibility have not been verified."),
         discord_configuration,
-        sidecar_configuration
+        sidecar_configuration,
+        handoff_configuration
       ],
       security: [ admin_configuration, tool_configuration, context_configuration, signature_configuration ]
     }
@@ -70,6 +71,23 @@ class IntegrationReadinessService
     keys << "OPENAI_REALTIME_MODEL" if value("OPENAI_REALTIME_MODEL").present?
     configuration("OpenAI Realtime", keys,
       detail: "API key present; the configured model or application default is used. Model access and live audio have not been tested.")
+  end
+
+  def handoff_configuration
+    unless value("ATHENA_HANDOFF_ENABLED").downcase == "true"
+      return item("Reviewed work handoff", :disabled, "Live delivery is disabled. Synthetic work items can still simulate a reviewed handoff.")
+    end
+
+    result = configuration("Reviewed work handoff", %w[ATHENA_HANDOFF_WEBHOOK_URL],
+      detail: "Live delivery is enabled and an endpoint is configured. Receiver permissions, deduplication, and delivery have not been verified.")
+    return result unless result[:status] == :configured
+
+    uri = URI.parse(value("ATHENA_HANDOFF_WEBHOOK_URL"))
+    return result if uri.is_a?(URI::HTTPS) && uri.host.present? && public_host?(uri.host) && uri.userinfo.nil? && uri.query.nil? && uri.fragment.nil?
+
+    item("Reviewed work handoff", :needs_review, "Use a public HTTPS endpoint without credentials, query parameters, or a fragment. Put authentication in the bearer header.")
+  rescue URI::InvalidURIError
+    item("Reviewed work handoff", :needs_review, "The handoff endpoint is not a valid public HTTPS URL.")
   end
 
   def agent_configuration

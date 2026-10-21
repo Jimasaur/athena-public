@@ -22,6 +22,17 @@
 <% intent = state["intent"] || {} %>
 <% risk = state["risk"] || {} %>
 
+<% if @conversation.work_items.exists? %>
+  <section class="brand-panel mb-6 rounded-sm p-5" aria-label="Linked operational work">
+    <h2 class="text-sm font-semibold text-[#182023]">Linked work</h2>
+    <div class="mt-3 space-y-2">
+      <% @conversation.work_items.order(created_at: :desc).limit(5).each do |item| %>
+        <p class="text-sm"><%= link_to item.title, admin_work_item_path(item), class: "font-semibold text-[#0f766e] underline" %> <span class="text-[#66716d]">— <%= item.status.humanize %> · <%= item.owner.presence || "Unassigned" %></span></p>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
 <section class="mb-6 rounded-sm border p-5 shadow-sm <%= @review_state[:panel_classes] %>">
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div class="min-w-0 flex-1">

@@ -1,0 +1,108 @@
+<% content_for(:title, "Work queue | Athena") %>
+<% content_for(:main_width, "max-w-7xl") %>
+
+<div class="mb-8 mt-5 flex flex-wrap items-start justify-between gap-4 sm:mt-8">
+  <div class="min-w-0">
+    <h1 class="text-4xl font-semibold tracking-tight text-[#182023] sm:text-5xl">Work queue</h1>
+    <p class="mt-3 max-w-3xl text-base leading-7 text-[#66716d] sm:text-lg">Capture requests, assign ownership, and keep the next step visible.</p>
+  </div>
+  <%= link_to "New work item", new_admin_work_item_path, class: "brand-primary-action inline-flex rounded-sm border px-5 py-3 text-sm font-semibold shadow-sm" %>
+</div>
+
+<nav class="mb-4 flex flex-wrap gap-x-7 gap-y-2 border-b border-[#dfe5dc]" aria-label="Work queue views">
+  <% [["open", "Open work"], ["needs_review", "Needs review"], ["unassigned", "Unassigned"], ["overdue", "Overdue"], ["all", "All work"]].each do |view, label| %>
+    <%= link_to label, admin_work_items_path(view: view), aria: { current: @view == view ? "page" : nil }, class: "border-b-2 px-1 py-3 text-sm #{@view == view ? 'border-[#0f766e] font-semibold text-[#0f766e]' : 'border-transparent text-[#66716d] hover:text-[#182023]'}" %>
+  <% end %>
+</nav>
+
+<section class="mb-6 rounded-sm border border-[#dfe5dc] bg-[#fffffb] p-4 sm:p-5" aria-label="Filter work queue">
+  <%= form_with url: admin_work_items_path, method: :get, class: "grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_auto] lg:items-end" do %>
+    <%= hidden_field_tag :view, @view %>
+    <% if @overdue %><%= hidden_field_tag :overdue, "1" %><% end %>
+    <div class="min-w-0 sm:col-span-2 lg:col-span-1">
+      <%= label_tag :q, "Search work", class: "block text-sm text-[#4f5d58]" %>
+      <%= search_field_tag :q, @query, maxlength: 200, placeholder: "Search work", class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %>
+    </div>
+    <div class="min-w-0">
+      <%= label_tag :status, "Status", class: "block text-sm text-[#4f5d58]" %>
+      <%= select_tag :status, options_for_select([[@view == "all" ? "All statuses" : "All open statuses", ""]] + (@view == "all" ? WorkItem::STATUSES : WorkItem::OPEN_STATUSES).map { |status| [status.humanize, status] }, @status), class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %>
+    </div>
+    <div class="min-w-0">
+      <%= label_tag :kind, "Kind", class: "block text-sm text-[#4f5d58]" %>
+      <%= select_tag :kind, options_for_select([["All kinds", ""]] + WorkItem::KINDS.map { |kind| [kind.humanize, kind] }, @kind), class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %>
+    </div>
+    <div class="min-w-0">
+      <%= label_tag :owner, "Owner", class: "block text-sm text-[#4f5d58]" %>
+      <%= select_tag :owner, options_for_select([["Anyone", ""], ["Unassigned", "unassigned"]] + @owners.map { |owner| [owner, owner] }, @owner), class: "mt-2 w-full min-w-0 rounded-sm border border-[#dfe5dc] bg-white px-3 py-2.5 text-sm" %>
+    </div>
+    <%= submit_tag "Apply filters", name: nil, class: "brand-primary-action rounded-sm border px-5 py-2.5 text-sm font-semibold" %>
+  <% end %>
+  <% if @query.present? || @status.present? || @kind.present? || @owner.present? || @overdue %>
+    <%= link_to "Clear filters", admin_work_items_path(view: @view), class: "mt-3 inline-block text-xs font-semibold text-[#0f766e] underline" %>
+  <% end %>
+</section>
+
+<section class="overflow-hidden rounded-sm border border-[#dfe5dc] bg-[#fffffb]" aria-label="Work items">
+  <% if @work_items.any? %>
+    <div class="hidden md:block">
+      <table class="w-full table-fixed border-collapse text-left text-sm">
+        <colgroup><col class="w-[40%]"><col class="w-[17%]"><col class="w-[13%]"><col class="w-[20%]"><col class="w-[10%]"></colgroup>
+        <thead class="bg-[#f7f7f2] text-[#4f5d58]">
+          <tr><% ["Work item", "Owner", "Due", "Status", "Priority"].each do |heading| %><th scope="col" class="border-b border-r border-[#dfe5dc] px-4 py-4 font-semibold last:border-r-0"><%= heading %></th><% end %></tr>
+        </thead>
+        <tbody>
+          <% @work_items.each do |item| %>
+            <tr class="border-b border-[#dfe5dc] last:border-b-0 hover:bg-[#eef7f4]" data-work-item-id="<%= item.id %>">
+              <td class="break-words border-r border-[#dfe5dc] px-4 py-4 align-top">
+                <%= link_to item.title, admin_work_item_path(item), class: "font-semibold leading-6 text-[#182023] hover:text-[#0f766e] hover:underline" %>
+                <p class="mt-1 text-xs leading-5 text-[#66716d]"><%= item.kind.humanize %> · <%= item.conversation_id ? "Conversation ##{item.conversation_id}" : "#{item.intake_source.humanize} intake" %><%= " · Synthetic demo" if item.demo? %></p>
+              </td>
+              <td class="break-words border-r border-[#dfe5dc] px-4 py-4 align-top <%= item.owner.blank? ? 'font-semibold text-[#6e6b17]' : 'text-[#33413d]' %>"><%= item.owner.presence || "Unassigned" %></td>
+              <td class="border-r border-[#dfe5dc] px-4 py-4 align-top <%= item.due_on && item.due_on < Date.current && !%w[resolved archived].include?(item.status) ? 'font-semibold text-[#9d332c]' : 'text-[#66716d]' %>"><%= item.due_on ? l(item.due_on, format: :short) : "Not set" %></td>
+              <td class="border-r border-[#dfe5dc] px-4 py-4 align-top"><%= render "status", status: item.status %></td>
+              <td class="break-words px-4 py-4 align-top <%= %w[high urgent].include?(item.priority) ? 'font-semibold text-[#9d332c]' : 'text-[#33413d]' %>"><%= item.priority.humanize %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <div class="divide-y divide-[#dfe5dc] md:hidden">
+      <% @work_items.each do |item| %>
+        <article class="min-w-0 p-4" data-mobile-work-item-id="<%= item.id %>">
+          <%= link_to item.title, admin_work_item_path(item), class: "break-words text-base font-semibold leading-6 text-[#182023] hover:text-[#0f766e]" %>
+          <p class="mt-1 text-xs text-[#66716d]"><%= item.kind.humanize %> · <%= item.conversation_id ? "Conversation ##{item.conversation_id}" : "#{item.intake_source.humanize} intake" %><%= " · Synthetic demo" if item.demo? %></p>
+          <div class="mt-3"><%= render "status", status: item.status %></div>
+          <dl class="mt-3 grid grid-cols-2 gap-3 text-xs">
+            <div><dt class="text-[#66716d]">Owner</dt><dd class="mt-1 break-words font-semibold text-[#33413d]"><%= item.owner.presence || "Unassigned" %></dd></div>
+            <div><dt class="text-[#66716d]">Due</dt><dd class="mt-1 text-[#33413d]"><%= item.due_on ? l(item.due_on, format: :short) : "Not set" %></dd></div>
+            <div><dt class="text-[#66716d]">Priority</dt><dd class="mt-1 font-semibold text-[#33413d]"><%= item.priority.humanize %></dd></div>
+          </dl>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="px-5 py-12">
+      <h2 class="text-lg font-semibold text-[#182023]"><%= @total_count.zero? ? "Capture the next request" : "No work matches this view" %></h2>
+      <p class="mt-2 max-w-2xl text-sm leading-6 text-[#66716d]"><%= @total_count.zero? ? "Add a work item with a clear next step. You can assign an owner and track resolution without creating a phone conversation." : "Try another queue view or clear the filters to find the work you need." %></p>
+      <%= link_to "New work item", new_admin_work_item_path, class: "mt-4 inline-block font-semibold text-[#0f766e] underline" %>
+    </div>
+  <% end %>
+</section>
+
+<div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs leading-6 text-[#66716d]">
+  <p>Showing <%= @first_result %>–<%= @last_result %> of <%= @filtered_count %> matching work items.</p>
+  <p>Delivery receipts and work resolution are tracked separately.</p>
+</div>
+<% if @total_pages > 1 %>
+  <nav class="mt-3 flex flex-wrap items-center justify-between gap-4 text-sm" aria-label="Work queue pages">
+    <p class="text-[#66716d]">Page <%= @page %> of <%= @total_pages %></p>
+    <div class="flex gap-5 font-semibold text-[#0f766e]">
+      <% if @page > 1 %><%= link_to "Previous", admin_work_items_path(@filters.merge(page: @page - 1)), rel: "prev" %><% end %>
+      <% if @page < @total_pages %><%= link_to "Next", admin_work_items_path(@filters.merge(page: @page + 1)), rel: "next" %><% end %>
+    </div>
+  </nav>
+<% end %>
+<div class="mt-8 flex flex-wrap gap-5 text-xs text-[#66716d]">
+  <%= link_to "Workspace overview", admin_overview_path, class: "hover:text-[#0f766e] underline" %>
+  <%= link_to "Demo scenarios", admin_demo_scenarios_path, class: "hover:text-[#0f766e] underline" %>
+</div>

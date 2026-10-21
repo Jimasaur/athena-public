@@ -158,6 +158,20 @@ class IntegrationReadinessServiceTest < ActiveSupport::TestCase
     assert_includes row(report, "Local AI sidecar route")[:detail], "have not been tested"
   end
 
+  test "work handoff is disabled by default and only inventories enabled endpoints" do
+    assert_equal :disabled, row(readiness, "Reviewed work handoff")[:status]
+    %w[false 1 yes YOUR_ENABLED_VALUE].each do |flag|
+      assert_equal :disabled, row(readiness({ "ATHENA_HANDOFF_ENABLED" => flag }), "Reviewed work handoff")[:status]
+    end
+    enabled = { "ATHENA_HANDOFF_ENABLED" => "true" }
+    assert_equal :missing, row(readiness(enabled), "Reviewed work handoff")[:status]
+    report = readiness(enabled.merge("ATHENA_HANDOFF_WEBHOOK_URL" => "https://receiver.acme.tools/intake"))
+    assert_equal :configured, row(report, "Reviewed work handoff")[:status]
+    report = readiness(enabled.merge("ATHENA_HANDOFF_WEBHOOK_URL" => "https://receiver.acme.tools/intake?token=hidden"))
+    assert_equal :needs_review, row(report, "Reviewed work handoff")[:status]
+    assert_not_includes report.to_json, "token=hidden"
+  end
+
   private
 
   def readiness(settings = {}, agents: [], environment: "development")

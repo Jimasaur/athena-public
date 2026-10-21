@@ -30,7 +30,12 @@ class DemoScenarioSeedService
   private
 
   def remove_existing_demo_records(scenario)
-    Conversation.where(twilio_call_sid: call_id_for(scenario)).find_each(&:destroy)
+    Conversation.where(twilio_call_sid: call_id_for(scenario)).find_each do |conversation|
+      # Only derived work from this exact synthetic source is replaced. Other
+      # work items retain their history when a source conversation is deleted.
+      WorkItem.where(idea_capture_id: conversation.idea_captures.select(:id)).find_each(&:destroy!)
+      conversation.destroy!
+    end
     CallState.where(call_id: call_id_for(scenario)).destroy_all
   end
 
@@ -286,6 +291,8 @@ class DemoScenarioSeedService
         "workshop_prompt" => "What would need to be true to pilot this safely in 30-60 days?"
       }
     )
+
+    WorkItemFromIdeaService.new(idea_capture: idea, actor: "demo_seed").call
 
     call_state.sidecar_events.create!(
       conversation: conversation,

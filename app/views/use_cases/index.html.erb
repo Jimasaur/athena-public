@@ -1,22 +1,23 @@
-<% content_for(:title, "Athena Use Cases | Voice Ops Control") %>
+<% content_for(:title, "Workflows | Athena") %>
 
 <section class="bg-[#f7f7f2]">
   <div class="mx-auto w-full max-w-6xl px-4 pb-14 pt-12 sm:px-6">
-    <p class="brand-kicker">Use case portfolio</p>
+    <p class="brand-kicker">Workflows</p>
     <h1 class="mt-5 max-w-4xl text-4xl font-semibold leading-tight text-[#182023] md:text-6xl">
-      Four paths for retreat-ready revenue cycle ideas.
+      Give incoming work a clear next step.
     </h1>
     <p class="mt-6 max-w-3xl text-lg leading-8 text-[#4f5d58]">
-      Athena turns phone conversations into structured improvement cards, sidecar notes, Discord reports, and a reviewable idea library.
+      Capture a staff request or voice idea, keep its source context, and give the resulting work an owner, a due date, and a reviewable handoff.
     </p>
-    <p class="mt-4 max-w-3xl text-sm leading-6 text-[#66716d]">These reference workflows include implemented features and future design work. Each page separates what you can explore today from what remains planned. Evaluate with synthetic data.</p>
+    <p class="mt-4 max-w-3xl text-sm leading-6 text-[#66716d]">The reference workflows below explore revenue cycle improvement. Each page separates available features from planned work. The shared queue also accepts staff requests directly. Evaluate with synthetic data.</p>
+    <%= link_to "Explore the work queue", admin_root_path, class: "brand-primary-action mt-6 inline-flex rounded-sm border px-5 py-3 text-sm font-semibold" %>
 
     <div class="mt-10 grid gap-3 border-y border-[#dfe5dc] py-5 md:grid-cols-4">
       <% [
-        ["Focus", "Rev Cycle"],
+        ["Reference domain", "Rev Cycle"],
         ["Project pages", @use_cases.count],
         ["Voice track", "OpenAI Realtime"],
-        ["Common spine", "Idea cards"]
+        ["Shared workspace", "Work queue"]
       ].each do |label, value| %>
         <div>
           <p class="text-xs font-semibold uppercase text-[#8a9690]"><%= label %></p>
@@ -59,13 +60,13 @@
   <div class="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
     <div>
       <p class="brand-kicker">Shared architecture</p>
-      <h2 class="mt-3 text-3xl font-semibold text-[#182023]">One control plane, one voice track.</h2>
+      <h2 class="mt-3 text-3xl font-semibold text-[#182023]">From intake to a recorded outcome.</h2>
       <p class="mt-4 leading-7 text-[#4f5d58]">
-        Athena keeps the durable record while OpenAI Realtime handles the live speech loop. Sidecars observe calls, update compact state, and create summaries, alerts, and drafts.
+        Athena keeps the source, decisions, and next step together. Staff web requests and voice ideas enter the same queue. Delivery acknowledgement stays separate from resolution, which requires an operator's note.
       </p>
     </div>
     <div class="grid gap-3">
-      <% ["Twilio call", "Voice provider", "Athena state", "Sidecar observers", "Reviewed action"].each_with_index do |step, index| %>
+      <% ["Capture a request or voice idea", "Clarify the work and source", "Assign an owner and next step", "Review a saved handoff", "Record resolution"].each_with_index do |step, index| %>
         <div class="flex items-center gap-4 border-l-2 border-[#0f766e] bg-[#fffffb] px-4 py-3">
           <span class="inline-flex h-8 w-8 items-center justify-center rounded-sm bg-[#111718] text-sm font-semibold text-[#c8d94a]"><%= index + 1 %></span>
           <span class="font-medium text-[#182023]"><%= step %></span>

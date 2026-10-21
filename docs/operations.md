@@ -12,7 +12,7 @@ script/seed_demo_scenarios
 bin/dev
 ```
 
-Open `http://127.0.0.1:3000/admin/demo_scenarios`. The checked-in example leaves provider credentials and `PUBLIC_BASE_URL` blank. Local development allows an unconfigured admin login only when the app is not configured as a public surface. Keep this tour on your machine and use synthetic data.
+Open `http://127.0.0.1:3000/admin` for the work queue, or `/admin/demo_scenarios` for the existing voice examples. Run `script/seed_work_queue_demo` to populate a synthetic intake/assignment walkthrough. The checked-in example leaves provider credentials and `PUBLIC_BASE_URL` blank. Local development allows an unconfigured admin login only when the app is not configured as a public surface. Keep this tour on your machine and use synthetic data.
 
 `PORT=3001 bin/dev` overrides the example port. `bin/dev` uses Foreman to load `.env`. Standalone Rails commands do not automatically load `.env`; export the values they need in the process environment. `bin/doctor` loads `.env` itself and reports local checks.
 
@@ -46,6 +46,12 @@ Supply runtime settings through your deployment's secret manager or protected en
 6. Place a controlled test call and inspect the conversation, transcript roles, tool results, and pending actions.
 
 Phone calls, search, Discord delivery, and approved email use their configured providers. They may incur provider costs. The synthetic tour does not establish that any provider integration is healthy.
+
+## Work layer upgrades
+
+Run `bin/rails db:migrate`, then `bin/rails athena:backfill_work_items` to link existing idea cards without replacing operator-edited work. The default console entry is now the work queue; the prior dashboard is available at `/admin/overview`. Existing idea, conversation, and demo URLs remain available.
+
+Live webhook handoff remains disabled until `ATHENA_HANDOFF_ENABLED=true` and a valid `ATHENA_HANDOFF_WEBHOOK_URL` are configured. See [work intake](work_intake.md) for review, deduplication requirements, and uncertain-delivery reconciliation.
 
 ## Data and release operations
 

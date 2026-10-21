@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../config/environment"
+
+# Refresh only the named synthetic scenarios; this never sends a handoff.
+conversations = DemoScenarioCatalog.all.to_h do |scenario|
+  [ scenario[:slug], DemoScenarioSeedService.new(slug: scenario[:slug]).call ]
+end
+
+examples = {
+  "rev-cycle-ideation-session" => { status: "archived" },
+  "automation-opportunity-discovery" => {
+    title: "Reduce manual queue routing", owner: "Priya Shah", status: "in_progress",
+    priority: "high", due_on: Date.current + 4, next_step: "Confirm the routing fields with the operations team."
+  },
+  "denials-cost-savings-lab" => {
+    title: "Review authorization denial pattern", kind: "issue", owner: "Marcus Lee", status: "waiting",
+    priority: "high", due_on: Date.current - 1, next_step: "Collect an anonymized sample for a human review."
+  },
+  "retreat-review-library" => {
+    title: "Prepare workshop follow-up", kind: "follow_up", owner: "Nora Patel", status: "ready",
+    priority: "low", due_on: Date.current + 7, next_step: "Review the discussion prompts and prepare the handoff."
+  }
+}
+
+examples.each do |slug, attributes|
+  idea = conversations.fetch(slug).idea_captures.first!
+  item = WorkItemFromIdeaService.new(idea_capture: idea, actor: "demo seed").call
+  item.audit_actor = "demo seed"
+  item.update!(attributes)
+end
+
+request = WorkItem.find_or_initialize_by(demo: true, intake_source: "web", title: "Clarify the weekly reporting request")
+request.audit_actor = "demo seed"
+request.assign_attributes(
+  kind: "request", description: "Synthetic request: the operations team wants a weekly report but has not confirmed the audience, fields, or delivery schedule.",
+  next_step: "Ask which decision the report should support and who owns the source data.",
+  status: "needs_review", priority: "normal", owner: nil, due_on: nil, resolution_note: nil, resolved_at: nil
+)
+request.save!
+
+puts "Synthetic work queue is ready at /admin. Every seeded item uses simulated handoffs."

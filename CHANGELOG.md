@@ -4,6 +4,10 @@
 
 ### Product
 
+- Reposition Athena around work intake and coordination, with a work queue as the console entry point.
+- Add requests, issues, opportunities, and follow-ups with ownership, priority, due dates, resolution notes, and event history.
+- Connect new voice idea captures to work items and add staff web intake.
+- Add explicit prepare/approve/deliver handoffs, saved revision checks, simulated delivery, and uncertain-delivery reconciliation.
 - Search and filter the Ideas library, page through results, and export matching cards as CSV.
 - Mark ideas reviewed, archive them, and reopen them with timeline audit events.
 - Show configuration status separately from local synthetic demo availability and live provider health.

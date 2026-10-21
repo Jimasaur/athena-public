@@ -1,82 +1,38 @@
-# Athena Positioning
+# Athena positioning
 
-Athena is best understood as a voice assistant operations layer.
+## Product direction
 
-It is not positioned as a healthcare product first. Healthcare is one important pilot space, but the broader product is a control plane for reviewable voice workflows.
+Athena is a workspace for turning incoming requests into coordinated operational work.
 
-## Current Read
+**Turn conversations into work your team can finish.** Capture the request, preserve its context, prepare the next action, and keep ownership, decisions, and outcomes visible.
 
-Athena already behaves like infrastructure for voice work:
+Voice is the first conversational entry point. Staff web intake provides another path into the same work queue. Work items, source context, review decisions, and delivery results form the product's core. Twilio, OpenAI Realtime, Rails, and optional sidecars implement that experience.
 
-- inbound and outbound call handling through Twilio
-- live assistant orchestration through OpenAI Realtime
-- transcripts, summaries, recordings, and operator review
-- follow-up, escalation, and handoff workflows
-- tool access for web search, calendars, email, and local OpenClaw reasoning
+## Initial buyer and problem
 
-## Recommended Category
+Start with an operations or IT lead whose team receives requests through calls and informal conversations. Requests often arrive without enough detail, a clear owner, or a dependable next step. The initial promise is a structured, reviewable handoff into the team's existing work system.
 
-Voice assistant operations platform.
+Start with one workflow per pilot: reporting requests, recurring service issues, improvement intake, or follow-up coordination. Revenue cycle ideation remains a reference workflow rather than the product's entire identity.
 
-## One-Line Value Proposition
+## Flagship walkthrough
 
-Athena helps you run voice assistants that take calls, capture context, trigger tools, and hand work back to a human when needed.
+An employee describes a recurring manual reporting problem. Athena retains the source conversation or staff-entered request, creates a work item, and gives an operator a place to clarify the next step and assign ownership. The operator prepares and reviews a specific downstream payload, approves it, and records the handoff. Resolution is recorded later with a note about the business result.
 
-## Beachhead
+A successful send proves delivery acknowledgement. It does not establish that the underlying work was completed.
 
-Start with operator and personal voice workflows:
+## Product language
 
-- call summaries
-- context capture and follow-up
-- email approval workflows
-- appointment and calendar actions
-- contact memory and profile updates
-- escalation to human review
+- Work queue: needs review, unassigned work, overdue items, and open work.
+- Work items: requests, issues, opportunities, and follow-ups.
+- Conversations and ideas: source context and structured reference artifacts.
+- Handoffs: saved proposed actions, operator decisions, delivery receipts, and reconciliation.
+- Voice profiles and connections: supporting configuration.
+- Demo scenarios and workspace overview: supporting exploration and diagnostics.
 
-This wedge keeps the product concrete while preserving room for small business and healthcare pilots.
+## Packaging
 
-## Ideal Customer Profile
+Offer a configured operational-intake pilot: one workflow, explicit review points, connected systems, and measurable handoff results. The public repository is a development reference implementation. Repeated use across real workflows should establish which coordination features deserve broader investment.
 
-Primary buyer:
+## Current limits
 
-- founder/operator
-- solo builder
-- small team lead
-- voice-heavy workflow owner
-- healthcare IT innovation leader testing safe pilots
-
-Primary users:
-
-- the operator themselves
-- assistants and coordinators
-- support or intake staff
-- anyone who needs a reliable voice layer with memory and tool access
-
-## Core Narrative
-
-Athena gives voice assistants a place to live. They can take calls, store context, call tools, and leave a clean trail of what happened.
-
-## Messaging Hierarchy
-
-Suggested homepage headline:
-
-Athena runs the voice assistants that handle your calls and follow-ups.
-
-Suggested subheadline:
-
-Capture context, trigger tools, review outcomes, and hand off to a human when a voice workflow needs judgment.
-
-Suggested proof points:
-
-- live call handling with reviewable transcripts
-- structured summaries and context capture
-- tool access for search, calendar, email, and operator workflows
-- approval gates before external side effects
-
-## Next Moves
-
-1. Keep homepage copy focused on voice workflows.
-2. Treat healthcare as a pilot space, not the whole identity.
-3. Make call summary plus email approval the flagship demo.
-4. Keep every live call powered by Twilio plus OpenAI Realtime.
-5. Add proof-oriented UI around tool calls, approvals, and outcomes.
+This release provides a work layer, staff web intake, existing voice-idea conversion, and a generic reviewed webhook handoff. Owners are text labels; authentication is the existing admin boundary. Multiuser roles, automatic assignment, email ingestion, reminders, and verified downstream resolution remain future work. A broader orchestration framework or autonomous operations promise is beyond the current implementation.

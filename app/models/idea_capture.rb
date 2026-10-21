@@ -5,6 +5,7 @@ class IdeaCapture < ApplicationRecord
   CSV_HEADERS = [ "ID", "Title", "Category", "Department", "Status", "Caller", "Problem", "Proposed solution", "Impact hypothesis", "Next step", "Conversation ID", "Captured at" ].freeze
 
   belongs_to :conversation
+  has_one :work_item, dependent: :nullify
 
   validates :title, :status, presence: true
   validates :status, inclusion: { in: STATUSES }

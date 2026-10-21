@@ -1,0 +1,7 @@
+<% colors = case status
+  when "needs_review" then "border-[#e2d96c] bg-[#fbfadf] text-[#6e6b17]"
+  when "ready", "resolved" then "border-[#bfddd6] bg-[#e8f3ef] text-[#0f766e]"
+  when "in_progress" then "border-[#bfddd6] bg-[#eef7f4] text-[#0d4f4a]"
+  else "border-[#dfe5dc] bg-[#f0f3ed] text-[#4f5d58]"
+  end %>
+<span class="inline-flex rounded-sm border px-2.5 py-1 text-xs font-semibold <%= colors %>"><%= status.humanize %></span>

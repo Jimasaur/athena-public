@@ -1,8 +1,8 @@
 # Athena
 
-Athena is a Rails control plane for OpenAI Realtime voice agents. Twilio brings calls in, OpenAI Realtime runs the live speech loop, and Athena keeps the durable record: transcripts, tool calls, sidecar state, approvals, and follow-up actions.
+Athena is a workspace for turning conversations and incoming requests into reviewed operational work. Capture the request, preserve its context, assign the next step, and keep decisions and handoffs visible.
 
-**From a conversation to a reviewable next step.** The reference workflow captures improvement ideas, links them to their source conversation, and gives operators a searchable review library with CSV export. Start with the local synthetic demo before connecting a phone number.
+**Turn conversations into work your team can finish.** Work items hold ownership, status, priority, due dates, and resolution notes. Voice idea capture and staff web intake feed the same queue. The Rails/Twilio/OpenAI Realtime stack retains the source conversations; reviewed webhook handoffs connect work to a downstream system.
 
 ## Project status
 
@@ -10,9 +10,10 @@ Public development prototype and reference implementation. The repository demons
 
 ## What to explore
 
-- **Integration design:** a Twilio call becomes a streaming OpenAI Realtime session with a shared tool dispatcher.
-- **Operational visibility:** Rails models and admin views retain conversations, tool activity, and action drafts.
-- **Human review:** sidecar and email-handoff workflows separate proposed actions from approval.
+- **Work intake:** staff create requests through an authenticated web form; voice idea capture creates conversation-linked work items.
+- **Coordination:** filter the work queue, assign owners and dates, record progress, and resolve work with a note.
+- **Reviewed handoffs:** prepare a payload, approve its exact saved revision, and record delivery separately from resolution.
+- **Source context:** conversations, transcripts, ideas, tool activity, and event history remain available.
 - **Demo walkthrough:** start with [the adoption guide](docs/adoption_guide.md) and [demo scenarios](docs/demo_walkthrough.md).
 
 ## Fast Path
@@ -27,13 +28,13 @@ cd athena-public
 cp .env.example .env
 bin/setup --skip-server
 bin/doctor
-script/seed_demo_scenarios
+script/seed_work_queue_demo
 bin/dev
 ```
 
 Then open:
 
-- `http://127.0.0.1:3000/admin`
+- `http://127.0.0.1:3000/admin` - work queue
 - `http://127.0.0.1:3000/admin/demo_scenarios`
 - `http://127.0.0.1:3000/use-cases`
 
@@ -55,6 +56,17 @@ Development binds to `127.0.0.1`. `bin/dev` starts the web and CSS processes; st
 4. Export the matching library as CSV for workshop preparation. Exports include impact hypotheses and source conversation IDs; spreadsheet formula prefixes are escaped.
 
 Review and archive actions are recorded in the conversation timeline. They do not execute follow-up drafts or contact external services.
+
+## From intake to follow-through
+
+1. Open **Work queue**, then **New work item**, to capture a staff request. Web intake starts in **Needs review** and does not call a model or send a message.
+2. Assign an owner, priority, and due date. Keep the description and next step editable; concurrent edits are checked with a saved revision.
+3. Prepare a handoff, inspect its saved payload, approve it, then explicitly deliver it. Synthetic records always simulate delivery. Live handoff is disabled until configured.
+4. Record resolution separately, with a note about the business outcome. A delivery acknowledgement does not mark work resolved.
+
+For existing idea cards, run `bin/rails athena:backfill_work_items` once after migrating. It creates missing work items and preserves existing operator edits. Existing conversation and idea URLs remain available.
+
+See [the work-intake guide](docs/work_intake.md) for handoff configuration, uncertain delivery handling, and current limitations.
 
 ## Live Voice Path
 
@@ -149,6 +161,8 @@ External side effects should stay approval-gated. Athena can request an email, G
 
 ## Docs Map
 
+- `docs/work_intake.md` - work queue, staff intake, reviewed handoff, and resolution workflow.
+- `docs/positioning.md` - product direction, initial buyer, and boundaries.
 - `docs/operations.md` - local setup, runtime configuration, storage, and deployment checks.
 - `CONTRIBUTING.md` - development workflow and validation.
 - `CHANGELOG.md` - user-visible changes.

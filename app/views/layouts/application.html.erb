@@ -25,6 +25,7 @@
   </head>
 
   <body class="min-h-screen bg-[#f7f7f2] text-[#182023] antialiased">
+    <a href="#workspace-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-white focus:p-3">Skip to content</a>
     <%= render "admin/shared/nav" %>
     <% if flash.any? %>
       <div class="pointer-events-none fixed right-6 top-20 z-50 w-full max-w-sm space-y-2">
@@ -39,7 +40,7 @@
       </div>
     <% end %>
     <% main_width = content_for?(:main_width) ? content_for(:main_width) : "max-w-6xl" %>
-    <main class="mx-auto w-full px-6 pb-10 pt-0 <%= main_width %>">
+    <main id="workspace-content" tabindex="-1" class="mx-auto w-full px-6 pb-10 pt-0 <%= main_width %>">
       <%= yield %>
     </main>
     <script>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_28_194500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_000200) do
   create_table "action_drafts", force: :cascade do |t|
     t.boolean "approval_required", default: true, null: false
     t.datetime "approved_at"
@@ -197,6 +197,74 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_28_194500) do
     t.index ["source"], name: "index_sidecar_events_on_source"
   end
 
+  create_table "work_item_events", force: :cascade do |t|
+    t.integer "work_item_id", null: false
+    t.string "event_type", limit: 80, null: false
+    t.string "actor", limit: 120, null: false
+    t.json "details", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["work_item_id", "created_at", "id"], name: "index_work_item_events_on_work_item_id_and_created_at_and_id"
+  end
+
+  create_table "work_item_handoffs", force: :cascade do |t|
+    t.integer "work_item_id", null: false
+    t.json "payload", default: {}, null: false
+    t.string "payload_digest", null: false
+    t.integer "work_item_lock_version", null: false
+    t.text "destination_url"
+    t.string "status", default: "pending_approval", null: false
+    t.boolean "dry_run", default: false, null: false
+    t.string "prepared_by", null: false
+    t.string "approved_by"
+    t.datetime "approved_at"
+    t.string "idempotency_key", null: false
+    t.json "response", default: {}, null: false
+    t.text "error"
+    t.datetime "delivery_started_at"
+    t.datetime "delivered_at"
+    t.datetime "finished_at"
+    t.string "reconciled_by"
+    t.datetime "reconciled_at"
+    t.text "reconciliation_note"
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["idempotency_key"], name: "index_work_item_handoffs_on_idempotency_key", unique: true
+    t.index ["work_item_id", "status"], name: "index_work_item_handoffs_on_work_item_id_and_status"
+    t.index ["work_item_id"], name: "index_work_item_handoffs_on_active_work_item", unique: true, where: "status IN ('pending_approval', 'approved', 'delivering', 'unknown')"
+    t.index ["work_item_id"], name: "index_work_item_handoffs_on_work_item_id"
+  end
+
+  create_table "work_items", force: :cascade do |t|
+    t.integer "conversation_id"
+    t.integer "idea_capture_id"
+    t.string "title", limit: 200, null: false
+    t.string "kind", default: "request", null: false
+    t.text "description"
+    t.text "next_step"
+    t.string "owner", limit: 120
+    t.string "priority", default: "normal", null: false
+    t.string "status", default: "needs_review", null: false
+    t.date "due_on"
+    t.text "resolution_note"
+    t.datetime "resolved_at"
+    t.string "intake_source", default: "manual", null: false
+    t.boolean "demo", default: false, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id"], name: "index_work_items_on_conversation_id"
+    t.index ["due_on"], name: "index_work_items_on_due_on"
+    t.index ["idea_capture_id"], name: "index_work_items_on_idea_capture_id", unique: true
+    t.index ["owner"], name: "index_work_items_on_owner"
+    t.index ["status", "priority", "due_on"], name: "index_work_items_on_status_and_priority_and_due_on"
+    t.check_constraint "intake_source IN ('voice', 'web', 'manual')", name: "work_items_valid_intake_source"
+    t.check_constraint "kind IN ('request', 'issue', 'opportunity', 'follow_up')", name: "work_items_valid_kind"
+    t.check_constraint "priority IN ('low', 'normal', 'high', 'urgent')", name: "work_items_valid_priority"
+    t.check_constraint "status IN ('needs_review', 'ready', 'in_progress', 'waiting', 'resolved', 'archived')", name: "work_items_valid_status"
+  end
+
   add_foreign_key "action_drafts", "call_states"
   add_foreign_key "action_drafts", "conversations"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -209,4 +277,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_28_194500) do
   add_foreign_key "messages", "conversations"
   add_foreign_key "sidecar_events", "call_states"
   add_foreign_key "sidecar_events", "conversations"
+  add_foreign_key "work_item_events", "work_items", on_delete: :cascade
+  add_foreign_key "work_item_handoffs", "work_items"
+  add_foreign_key "work_items", "conversations", on_delete: :nullify
+  add_foreign_key "work_items", "idea_captures", on_delete: :nullify
 end

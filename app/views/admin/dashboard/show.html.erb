@@ -1,6 +1,6 @@
 <%= render "admin/shared/page_header",
-  title: "Athena Control",
-  subtitle: "Demo cockpit for calls, sidecars, drafts, and readiness",
+  title: "Workspace overview",
+  subtitle: "Source conversations, prepared actions, and connection configuration",
   right_class: "flex flex-wrap items-center gap-2 text-xs text-[#66716d]" do %>
   <%= link_to use_cases_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#dfe5dc] bg-[#fffffb] px-3 py-2 text-sm font-semibold text-[#182023] shadow-sm hover:bg-[#f0f3ed]" do %>
     <%= tabler_icon("layout-grid", size: 16) %>
@@ -49,7 +49,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold text-[#182023]">Guided Demo</h2>
-          <p class="text-xs text-[#66716d]">A stable walkthrough of the Athena chain</p>
+          <p class="text-xs text-[#66716d]">Explore the reference workflows with synthetic records</p>
         </div>
         <%= link_to admin_demo_scenarios_path, class: "inline-flex items-center gap-2 rounded-sm border border-[#d95f54]/30 bg-[#d95f54]/10 px-3 py-2 text-sm font-semibold text-[#9d332c] hover:bg-[#fbecea]" do %>
           <%= tabler_icon("player-play", size: 16) %>
